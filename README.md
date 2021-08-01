@@ -26,7 +26,10 @@
 
 6. [Store-access-for-a-component](#Store-access-for-a-component)
 
-   - [Get-data-from-storage-in-a-counter](#Get-data-from-storage-in-a-counter)
+   - MapStateToProps: [Get-data-from-storage-in-a-counter](#Get-data-from-storage-in-a-counter)
+   - MapDispatchToProps: [Write-changes-to-storage](#Write-changes-to-storage)
+
+7. [Add-step-change](#Add-step-change)
 
 ### Basic
 
@@ -90,14 +93,11 @@ export const action = (value) => ({
 
 1. Установить state-manager redux `npm i redux`
 2. Установить пакет для связывания Redux + React `npm i react-redux`
-3. В корневом `index.js` сделать импорты `createStore` и `Provider`. Обернуть приложение в компонент`Provider` и передать `store` пропсом:
+3. В корневом `index.js` сделать импорты `Provider`. Обернуть приложение в компонент`Provider`, заимпортировать store и передать его пропсом:
 
    ```
-   import { createStore } from 'redux';
    import { Provider } from 'react-redux';
-
-   const reducer = (state = {}, action) => state;
-   const store = createStore(reducer);
+   import store from "./Redux/store";
 
    <Provider store={store}>
    <App />
@@ -127,12 +127,12 @@ const reducer = (state = initialState, action) => {
 ```
 export const increment = (value) => ({
   type: "counter/Increment",
-  payload: value + 1,
+  payload: value
 });
 
 export const decrement = (value) => ({
   type: "counter/Decrement",
-  payload: value - 1,
+  payload: value
 });
 ```
 
@@ -169,7 +169,7 @@ const reducer = (state = initialState, {type, payload}) => {
 
 #### Remove-state-and-methods-in-the-component
 
-Все методы прописаны в Редакса, поэтому удаляем их из компонента. Изначально он <a href="./src/components/Counter/CounterState.jsx">выглядел так</a>, а теперь внутри останется только jsx-разметка:
+Все методы прописаны в Редаксе, поэтому удаляем их из компонента. Изначально он <a href="./src/components/Counter/CounterState.jsx">выглядел так</a>, а теперь внутри останется только jsx-разметка:
 
 ```
 const Counter = () => {
@@ -185,8 +185,9 @@ const Counter = () => {
 
 #### Store-access-for-a-component
 
-Для доступа к хранилищу внутри компонента можно использовать HOC connect:
+Для доступа к хранилищу внутри компонента можно использовать HOC connect, который нужно заимпортировать в тело компонента: `import {connect} from 'react-redux`
 
+Синтаксис:
 `connect(mapStateToProps, mapDispatchToProps)(Component)`
 
 Объявление `mapStateToProps`:
@@ -218,10 +219,7 @@ const mapDispatchToProps = dispatch => ({
 
 #### Get-data-from-storage-in-a-counter
 
-Получим данные из хранилища в компоненте Counter. Для этого:
-
-1. Сделаем в компоненте импорт - `import {connect} from 'react-redux`
-2. Пропишем метод mapStateToProps для доступа к стейту и возьмем оттуда значение свойства counterValue
+Пропишем метод mapStateToProps в компоненте `Counter` для доступа к стейту и возьмем оттуда значение свойства counterValue
 
 ```
 const mapStateToProps = (state) => {
@@ -233,4 +231,28 @@ const mapStateToProps = (state) => {
 
 ![Пример](./images/hoc-connect.jpg)
 
-3. При экспорте компонента обернем его в HOC connect, передав ему параметры для связи с хранилищем - `export default connect()(Counter)`
+При экспорте компонента обернем его в HOC connect, передав ему параметры для связи с хранилищем - `export default connect(mapStateToProps)(Counter)`
+
+#### Write-changes-to-storage
+
+Обработаем изменения счетчика. Для этого потребуется:
+
+1. Заимпортировать в компонент [ранее созданные action-creators](#Counter-actions-creators)
+2. Прописать метод `MapDispatchToProps`, который примет функцию и вернет `dispatch` с соответствующим экшном
+
+```
+ const mapDispatchToProps = (dispatch) => {
+ return {
+  onIncrement: () => dispatch(increment),
+  onDecrement: () => dispatch(decrement),
+ }
+};
+export default connect(mapStateToProps, mapDispatchToProps)(Counter);
+```
+
+3. Передать `MapDispatchToProps` 2-м аргументом в `HOC connect`
+4. Прокинуть `OnIncrement` и `OnDecrement` в пропсы компонента
+
+#### Add-step-change
+
+Основные функции счетчика готовы, он уменьшает и увеличивает значение `value`, записывая его в `storage`. Но у нас в счетчики также есть `step` для указания числа, на которое должен увеличиваться или уменьшаться значение `value`. Изменим немного структуру хранилища, чтобы значение `step` можно было указывать динамически.

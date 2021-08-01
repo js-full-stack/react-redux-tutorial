@@ -1,4 +1,5 @@
 import { createStore } from "redux";
+import counterTypes from "./types";
 
 const initialState = { counterValue: 0 };
 

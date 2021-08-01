@@ -3,13 +3,13 @@ import Controls from "./Controls";
 import Value from "./Value";
 import "./Counter.css";
 import { connect } from "react-redux";
-
-const Counter = ({ value }) => {
+import { increment, decrement } from "../../Redux/actions";
+const Counter = ({ value, onIncrement, onDecrement }) => {
   return (
     <div className="Counter">
-      <Value value="" />
+      <Value value={value} />
 
-      <Controls onIncrement="" onDecrement="" />
+      <Controls onIncrement={onIncrement} onDecrement={onDecrement} />
     </div>
   );
 };
@@ -20,4 +20,11 @@ const mapStateToProps = (state) => {
   };
 };
 
-export default connect(mapStateToProps)(Counter);
+const mapDispatchToProps = (dispatch) => {
+  return {
+    onIncrement: () => dispatch(increment()),
+    onDecrement: () => dispatch(decrement()),
+  };
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(Counter);
