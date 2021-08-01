@@ -12,9 +12,9 @@
 
 ## Практика
 
-## Counter
+[Start](#start)
 
-1. [Start](#start)
+## Counter
 
 2. [Counter](#counter)
 

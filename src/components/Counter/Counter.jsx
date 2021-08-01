@@ -4,7 +4,7 @@ import Value from "./Value";
 import "./Counter.css";
 import { connect } from "react-redux";
 
-const Counter = () => {
+const Counter = ({ value }) => {
   return (
     <div className="Counter">
       <Value value="" />
