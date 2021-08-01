@@ -1,70 +1,236 @@
-# Getting Started with Create React App
+# Навигация
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Основы Redux
 
-## Available Scripts
+1. [Basic](#basic)
 
-In the project directory, you can run:
+2. [Create_action](#create_action)
 
-### `npm start`
+3. [Action_creator](#action_creator)
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+4. [Reducer](#reducer)
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Практика
 
-### `npm test`
+## Counter
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+1. [Start](#start)
 
-### `npm run build`
+2. [Counter](#counter)
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+3. [Counter](#counter-1)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+4. [Counter-actions-creators](#counter-actions-creators)
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+5. [Switch-cases](#switch-cases)
 
-### `npm run eject`
+6. [Remove-state-and-methods-in-the-component](#remove-state-and-methods-in-the-component)
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+7. [Store-access-for-a-component](#Store-access-for-a-component)
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+   - [Get-data-from-storage-in-a-counter](#Get-data-from-storage-in-a-counter)
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+### Basic
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+Для понимания основ работы redux:
 
-## Learn More
+1. Создать папку redux, а в ней файл `store.js`;
+2. В `store.js`:
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- `import { createStore } from "redux"`;
+- `const reducer = (state = {}, action) => state;`
+- `const store = createStore(reducer);`
+- `export default store;`
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Store - это js-объект, который содержит методы, позволяющие получить (`getState`) и изменить (`dispatch`) состояние.
 
-### Code Splitting
+`Dispatch` принимает `action` в качестве параметра, который изменяет состояние и доставляет его в reducer
+В объекте `state` редьюсера можно указать дефолтное значение для стейта
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+#### Create_action
 
-### Analyzing the Bundle Size
+Создадим в папке `redux` файл `actions.js` и добавим в него action:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+```
+export const action = {
+  type: "MY_ACTION",
+  payload: "my new payload"
+};
 
-### Making a Progressive Web App
+export default action;
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+```
 
-### Advanced Configuration
+- `type` - обязательное свойство, определяющее имя экшна, по которому далее будет происходить поиск
+- `payload` - полезная нагрузка, в которой описываются действия, которые изменяют состояние
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+Теперь можно получить данные из объекта action в любом компоненте таким образом: `console.log(store.dispatch(action));`
 
-### Deployment
+#### Action_creator
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+Генераторы экшенов (Action Creators) — функции, которые создают экшены.
 
-### `npm run build` fails to minify
+В Redux генераторы экшенов (action creators) просто возвращают action:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+```
+export const action = (value) => ({
+  type: "MY_ACTION",
+  payload: value,
+});
+
+```
+
+Такой подход позволяет динамически изменять `payload`
+
+#### Reducer
+
+Чтобы action мог обновиться в store, он должен дойти до редьюсера. `Reducer` - чистая функция, работающая только с синхронным кодом. Он принимает предыдущий `state` и `action`, на основе чего вычистляет и возвращает новое состояние.
+
+`(previousState, action) => newState`
+
+### Start
+
+1. Установить state-manager redux `npm i redux`
+2. Установить пакет для связывания Redux + React `npm i react-redux`
+3. В корневом `index.js` сделать импорты `createStore` и `Provider`. Обернуть приложение в компонент`Provider`:
+
+   ```
+   import { createStore } from 'redux';
+   import { Provider } from 'react-redux';
+
+   const reducer = (state = {}, action) => state;
+   const store = createStore(reducer);
+
+   <Provider store={store}>
+   <App />
+   </Provider>
+   ```
+
+## Counter
+
+Переведем компонент <a href='./src/components/Counter'> Counter </a> на redux
+
+1. Пропишем в `store.js` initialState - начальное значение стейта и редьюсер, которые вернет новый стейт после экшна:
+
+```
+const initialState = {};
+
+const reducer = (state = initialState, action) => {
+  return state;
+};
+```
+
+#### Counter-actions-creators
+
+2. Пропишем в `actions.js` 2 экшн-креэйтора для увеличения и уменьшения значения счетчика:
+
+```
+export const increment = (value) => ({
+  type: "counter/Increment",
+  payload: value + 1,
+});
+
+export const decrement = (value) => ({
+  type: "counter/Decrement",
+  payload: value - 1,
+});
+```
+
+#### Switch-cases
+
+Так как редьюсер различает экшны по полю `type`, для уточнения значения этого поля сделаем ветвление в `store.js` при помощи инструкции `switch`. Также предварительно инициализируем начальное значение счетчика:
+
+```
+
+// Инициализируем стейт
+const initialState = { counterValue: 0 };
+
+const reducer = (state = initialState, {type, payload}) => {
+  switch (type) {
+
+    // Если type = counter/Increment, увеличиваем counterValue на
+    // значение action.payload
+
+    case "counter/Increment":
+      return { counterValue: state.counterValue + payload };
+
+    // Если type = counter/Decrement, уменьшаем counterValue на
+    // значение action.payload
+
+    case "counter/Decrement":
+      return { counterValue: state.counterValue - payload };
+
+    // Если reducer получит action, который не может обработать, вернем state
+    default:
+      return state;
+  }
+};
+```
+
+#### Remove-state-and-methods-in-the-component
+
+Все методы прописаны в Редакса, поэтому удаляем их из компонента. Изначально он <a href="./src/components/Counter/CounterState.jsx">выглядел так</a>, а теперь внутри останется только jsx-разметка:
+
+```
+const Counter = () => {
+  return (
+    <div className="Counter">
+      <Value value="" />
+
+      <Controls onIncrement="" onDecrement="" />
+    </div>
+  );
+};
+```
+
+#### Store-access-for-a-component
+
+Для доступа к хранилищу внутри компонента можно использовать HOC connect:
+
+`connect(mapStateToProps, mapDispatchToProps)(Component)`
+
+Объявление `mapStateToProps`:
+
+```
+ const mapStateToProps = (state, props) => ({
+     state: data
+   });
+```
+
+где:
+
+- `state` - весь стейт, хранящийся в `store`,
+- `props` - та часть стора, которую нужно записать в пропсы.
+
+Объявление `mapDispatchToProps`:
+
+```
+const mapDispatchToProps = dispatch => ({
+  fn: data => dispatch(fn(text)),
+});
+```
+
+2. `mapDispatchToProps(dispatch, fn)`, где:
+
+   - `dispatch` - метод для отправки экшна
+   - `fn` - функция, изменяющая `store`
+   - `data` - данные, которые нужно изменить при экшне
+
+#### Get-data-from-storage-in-a-counter
+
+Получим данные из хранилища в компоненте Counter. Для этого:
+
+1. Сделаем в компоненте импорт - `import {connect} from 'react-redux`
+2. Пропишем метод mapStateToProps для доступа к стейту и возьмем оттуда значение свойства counterValue
+
+```
+const mapStateToProps = (state) => {
+  return {
+    value: state.counterValue,
+  };
+};
+```
+
+![Пример]('./../src/images/hoc-connect.jpg')
+
+1. При экспорте компонента обернем его в HOC connect, передав ему параметры для связи с хранилищем - `export default connect()(Counter)`
