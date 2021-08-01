@@ -231,6 +231,6 @@ const mapStateToProps = (state) => {
 };
 ```
 
-![Пример]('./../src/images/hoc-connect.jpg')
+![Пример]('../../src/images/hoc-connect.jpg')
 
 1. При экспорте компонента обернем его в HOC connect, передав ему параметры для связи с хранилищем - `export default connect()(Counter)`
