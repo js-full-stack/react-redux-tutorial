@@ -90,7 +90,7 @@ export const action = (value) => ({
 
 1. Установить state-manager redux `npm i redux`
 2. Установить пакет для связывания Redux + React `npm i react-redux`
-3. В корневом `index.js` сделать импорты `createStore` и `Provider`. Обернуть приложение в компонент`Provider`:
+3. В корневом `index.js` сделать импорты `createStore` и `Provider`. Обернуть приложение в компонент`Provider` и передать `store` пропсом:
 
    ```
    import { createStore } from 'redux';
@@ -104,9 +104,11 @@ export const action = (value) => ({
    </Provider>
    ```
 
+   Теперь store будем доступен по всему приложению вне зависимости от уровня вложенности компонента
+
 ## Counter
 
-Переведем компонент <a href='./src/components/Counter'> Counter </a> на redux
+Переведем компонент <a href='./src/components/Counter/CounterState.jsx'> Counter </a> на redux
 
 1. Пропишем в `store.js` initialState - начальное значение стейта и редьюсер, которые вернет новый стейт после экшна:
 
