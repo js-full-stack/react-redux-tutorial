@@ -18,15 +18,13 @@
 
 2. [Counter](#counter)
 
-3. [Counter](#counter-1)
+3. [Counter-actions-creators](#counter-actions-creators)
 
-4. [Counter-actions-creators](#counter-actions-creators)
+4. [Switch-cases](#switch-cases)
 
-5. [Switch-cases](#switch-cases)
+5. [Remove-state-and-methods-in-the-component](#remove-state-and-methods-in-the-component)
 
-6. [Remove-state-and-methods-in-the-component](#remove-state-and-methods-in-the-component)
-
-7. [Store-access-for-a-component](#Store-access-for-a-component)
+6. [Store-access-for-a-component](#Store-access-for-a-component)
 
    - [Get-data-from-storage-in-a-counter](#Get-data-from-storage-in-a-counter)
 
@@ -231,6 +229,6 @@ const mapStateToProps = (state) => {
 };
 ```
 
-![Пример]('../../src/images/hoc-connect.jpg')
+![Пример](./images/hoc-connect.jpg)
 
-1. При экспорте компонента обернем его в HOC connect, передав ему параметры для связи с хранилищем - `export default connect()(Counter)`
+3. При экспорте компонента обернем его в HOC connect, передав ему параметры для связи с хранилищем - `export default connect()(Counter)`
