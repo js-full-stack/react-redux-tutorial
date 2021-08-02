@@ -420,7 +420,7 @@ export const DECREMENT = "counter/Decrement";
 
 после чего зампортируем эти данные в `counter-actions.js` и `counter-reducer.js` и будем использовать имена переменных вместо `counter/Increment` и `counter/Decrement`.
 
-Так как вся логика счетчика уехала в [counter-reducer.js](./../src/Redux/Counter/counter-reducer.js), хранилище `store.js` стало куда чище:
+Так как вся логика счетчика уехала в [counter-reducer.js](/src/Redux/Counter/counter-reducer.js), хранилище `store.js` стало куда чище:
 
 ```
 import { createStore, combineReducers } from "redux";
