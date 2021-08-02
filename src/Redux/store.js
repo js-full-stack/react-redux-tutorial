@@ -1,19 +1,12 @@
-import { createStore } from "redux";
-import counterTypes from "./types";
+import { createStore, combineReducers } from "redux";
+import counterReducer from "./Counter/counter-reducer";
 
-const initialState = { counterValue: 0 };
+const rootReducer = combineReducers({
+  counter: counterReducer,
+});
 
-const reducer = (state = initialState, { type, payload }) => {
-  switch (type) {
-    case "counter/Increment":
-      return { counterValue: state.counterValue + payload };
-
-    case "counter/Decrement":
-      return { counterValue: state.counterValue - payload };
-
-    default:
-      return state;
-  }
-};
-const store = createStore(reducer);
+const store = createStore(
+  rootReducer,
+  window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__()
+);
 export default store;

@@ -1,11 +1,11 @@
-import counterTypes from "./types";
+import { INCREMENT, DECREMENT } from "./counter-types";
 
 export const increment = (value) => ({
-  type: "counter/Increment",
+  type: INCREMENT,
   payload: value,
 });
 
 export const decrement = (value) => ({
-  type: "counter/Decrement",
+  type: DECREMENT,
   payload: value,
 });

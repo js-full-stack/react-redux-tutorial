@@ -16,20 +16,20 @@
 
 ## Counter
 
-2. [Counter](#counter)
+2. [Counter-actions-creators](#counter-actions-creators)
 
-3. [Counter-actions-creators](#counter-actions-creators)
+3. [Switch-cases](#switch-cases)
 
-4. [Switch-cases](#switch-cases)
+4. [Remove-state-and-methods-in-the-component](#remove-state-and-methods-in-the-component)
 
-5. [Remove-state-and-methods-in-the-component](#remove-state-and-methods-in-the-component)
-
-6. [Store-access-for-a-component](#Store-access-for-a-component)
+5. [Store-access-for-a-component](#Store-access-for-a-component)
 
    - MapStateToProps: [Get-data-from-storage-in-a-counter](#Get-data-from-storage-in-a-counter)
    - MapDispatchToProps: [Write-changes-to-storage](#Write-changes-to-storage)
 
-7. [Add-step-change](#Add-step-change)
+6. [Composition-reducers](#Composition-reducers)
+
+7. [Refactoring](#Refactoring)
 
 ### Basic
 
@@ -69,9 +69,7 @@ export default action;
 
 #### Action_creator
 
-Генераторы экшенов (Action Creators) — функции, которые создают экшены.
-
-В Redux генераторы экшенов (action creators) просто возвращают action:
+Генераторы экшенов (Action Creators) — функции, которые создают и возвращают экшны
 
 ```
 export const action = (value) => ({
@@ -104,7 +102,23 @@ export const action = (value) => ({
    </Provider>
    ```
 
-   Теперь store будем доступен по всему приложению вне зависимости от уровня вложенности компонента
+4. Добавить DevTools для работы с Redux:
+
+- 4.1 Установить в браузере расширение Redux DevTools
+- 4.2 Добавить в проект пакет <a href="https://www.npmjs.com/package/redux-devtools-extension">Redux DevTools Extension's </a> `npm install --save redux-devtools-extension`
+- 4.3 Добавить `store.js` импорт `import { composeWithDevTools } from "redux-devtools-extension"`
+- 4.4 Добавить вызов `composeWithDevTools` вторым аргументом в `createStore` `const store = createStore(reducer, composeWithDevTools())`
+
+Также есть другой способ подключить Redux DevTools:
+
+```
+const store = createStore(
+  reducer,
+  window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__()
+);
+```
+
+При таком варианте устанавливать npm-пакет `redux-devtools-extension` не нужно.
 
 ## Counter
 
@@ -122,7 +136,7 @@ const reducer = (state = initialState, action) => {
 
 #### Counter-actions-creators
 
-2. Пропишем в `actions.js` 2 экшн-креэйтора для увеличения и уменьшения значения счетчика:
+2. Создадим папку Пропишем в `actions.js` 2 экшн-креэйтора для увеличения и уменьшения значения счетчика:
 
 ```
 export const increment = (value) => ({
@@ -136,29 +150,47 @@ export const decrement = (value) => ({
 });
 ```
 
+**p.s [Позднее средалем рефакторинг](#refactoring)**
+
 #### Switch-cases
 
 Так как редьюсер различает экшны по полю `type`, для уточнения значения этого поля сделаем ветвление в `store.js` при помощи инструкции `switch`. Также предварительно инициализируем начальное значение счетчика:
 
 ```
 
-// Инициализируем стейт
-const initialState = { counterValue: 0 };
+// Инициализируем стейт, сразу же указывая параметры счетчика в отдельном объекте. Это делается для обеспечения модульности и удобства, ведь в дальнейшем в стейте будет лежать не только counter
+const initialState = {
+  counter: {
+    value: 0,
+    step: 5,
+  },
+};
 
 const reducer = (state = initialState, {type, payload}) => {
   switch (type) {
 
-    // Если type = counter/Increment, увеличиваем counterValue на
-    // значение action.payload
+    // Если type = counter/Increment, увеличиваем value на
+    // значение action.payload, предварительно распыляя значение step, так как нам не нужно его менять
 
     case "counter/Increment":
-      return { counterValue: state.counterValue + payload };
-
-    // Если type = counter/Decrement, уменьшаем counterValue на
+      return {
+        ...state,
+        counter: {
+          ...state.counter,
+          value: state.counter.value + payload,
+        },
+      };
+    // Если type = counter/Decrement, уменьшаем value на
     // значение action.payload
 
-    case "counter/Decrement":
-      return { counterValue: state.counterValue - payload };
+     case "counter/Decrement":
+      return {
+        ...state,
+        counter: {
+          ...state.counter,
+          value: state.counter.value - payload,
+        },
+      };
 
     // Если reducer получит action, который не может обработать, вернем state
     default:
@@ -167,9 +199,11 @@ const reducer = (state = initialState, {type, payload}) => {
 };
 ```
 
+_Примечание: пока у нас 1 state для всех потенциальных операций. Это сделано для ознакомления, но на практике не очень удобно, так как при любом обновлении приходится распылять state, чтобы не затереть значения свойств, которые не диспатчатся. [Позднее перепишем код](#Composition-reducers) так, чтобы для каждого типа операций был отдельный редьюсер_
+
 #### Remove-state-and-methods-in-the-component
 
-Все методы прописаны в Редаксе, поэтому удаляем их из компонента. Изначально он <a href="./src/components/Counter/CounterState.jsx">выглядел так</a>, а теперь внутри останется только jsx-разметка:
+Все методы прописаны в Редаксе, поэтому удаляем их из компонента. Изначально он <a href="./src/components/CounterState/CounterState.jsx">выглядел так</a>, а теперь внутри останется только jsx-разметка:
 
 ```
 const Counter = () => {
@@ -219,12 +253,13 @@ const mapDispatchToProps = dispatch => ({
 
 #### Get-data-from-storage-in-a-counter
 
-Пропишем метод mapStateToProps в компоненте `Counter` для доступа к стейту и возьмем оттуда значение свойства counterValue
+Пропишем метод mapStateToProps в компоненте `Counter` для доступа к стейту и извлечем оттуда значение свойства `value` и `step`
 
 ```
 const mapStateToProps = (state) => {
   return {
-    value: state.counterValue,
+    value: state.counter.value,
+    step: state.counter.step
   };
 };
 ```
@@ -239,20 +274,166 @@ const mapStateToProps = (state) => {
 
 1. Заимпортировать в компонент [ранее созданные action-creators](#Counter-actions-creators)
 2. Прописать метод `MapDispatchToProps`, который примет функцию и вернет `dispatch` с соответствующим экшном
+3. Передать в анонимную функцию параметром `value` и указать это `value` как аргумент для экшн-креэйторов increment и decrement
 
 ```
  const mapDispatchToProps = (dispatch) => {
  return {
-  onIncrement: () => dispatch(increment),
-  onDecrement: () => dispatch(decrement),
+  onIncrement: (value) => dispatch(increment(value)),
+  onDecrement: (value) => dispatch(decrement(value)),
  }
 };
 export default connect(mapStateToProps, mapDispatchToProps)(Counter);
 ```
 
-3. Передать `MapDispatchToProps` 2-м аргументом в `HOC connect`
 4. Прокинуть `OnIncrement` и `OnDecrement` в пропсы компонента
+5. Прокинуть в компонент controls функции `onIncrement` и `onDecrement`, указав step как аргумент
+6. Передать `MapDispatchToProps` 2-м аргументом в `HOC connect`
 
-#### Add-step-change
+![Пример](./images/step.jpg)
 
-Основные функции счетчика готовы, он уменьшает и увеличивает значение `value`, записывая его в `storage`. Но у нас в счетчики также есть `step` для указания числа, на которое должен увеличиваться или уменьшаться значение `value`. Изменим немного структуру хранилища, чтобы значение `step` можно было указывать динамически.
+Теперь начальное значение счетчика и step можно изменять динамически в хранилище
+
+#### Composition-reducers
+
+При масштабировании приложения поддержка стейта в одном редьюсере становится сложнее и запутаннее из за глубины вложеннсоти и многочисленности свойств, поэтому лучше использовать несколько редьюсеров, комбинируя их с помощью функции `combineReducers`. Если [раньше у нас был один initial state для всех редьюсеров](#Switch-cases), то теперь будет отдельный для конкретного типа операций. В итоге initialState и reducer для счетчика будет выглядеть следующим образом:
+
+```
+
+// Создаем initialState для счетчика
+const counterInitialState = {
+  value: 10,
+  step: 15,
+};
+
+const counterReducer = (state = counterInitialState, { type, payload }) => {
+  switch (type) {
+    case "counter/Increment":
+      return {
+     // Распыляем state на случай, если в будущем изменится значение step
+
+        ...state,
+        value: state.value + payload,
+      };
+
+    case "counter/Decrement":
+      return {
+        ...state,
+        value: state.value - payload,
+      };
+
+    default:
+      return state;
+  }
+};
+
+//  Инициализируем корневой редьюсер и записываем его
+const rootReducer = combineReducers({
+  counter: counterReducer,
+});
+
+// Передаем rootReducer в функцию createStore
+const store = createStore(
+  rootReducer,
+  window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__()
+);
+
+```
+
+Счетчик работает, но нам все еще нужно распылять state, так как если этого не делать, а значение `step` изменится, логика сломается. Чтобы не распылать стейт, можем сделать отдельные редьюсеры для свойств `value` и `step`, объединив их в counterReducer через функцию `combineReducer`, а его в свою очередь через еще один `combineReducer` в `rootReducer`, где будут храниться все части стейта приложения, и этот rootReducer уже передать аргументов в функцию createStore:
+
+```
+const valueReducer = (state = 0, { type, payload }) => {
+  switch (type) {
+    case "counter/Increment":
+      return state + payload;
+
+    case "counter/Decrement":
+      return state - payload;
+
+    default:
+      return state;
+  }
+};
+
+const stepReducer = (state = 5, action) => state;
+
+const counterReducer = combineReducers({
+  value: valueReducer,
+  step: stepReducer,
+});
+
+const rootReducer = combineReducers({
+  counter: counterReducer,
+});
+
+const store = createStore(
+  rootReducer,
+  window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__()
+);
+```
+
+Как видно, теперь редьюсеры максимально плоские и ничего распылять не нужно.
+
+### Refactoring
+
+Если логика Redux прописана в одном и том же месте, при масштабировании приложения возникнут сложности с поддержкой. Чтобы этого избежать, нужно разделить код на смысловые модули:
+
+1. Создадим в папке `Redux` папку `Counter`
+2. В папку `Counter` добавим файл `counter-actions.js` и перенесем в него [прописанные ранее экшн-креэйторы](#Counter-actions-creators) из файла `actions.js`
+3. В папку `Counter` добавим файл `counter-reducer.js` и перенесем в него редьюсеры из `store.js`
+
+```
+import { combineReducers } from "redux";
+import actionTypes from "./counter-types";
+
+const valueReducer = (state = 10, { type, payload }) => {
+  switch (type) {
+    case "counter/Increment":
+      return state + payload;
+
+    case "counter/Decrement":
+      return state - payload;
+
+    default:
+      return state;
+  }
+};
+
+const stepReducer = (state = 5, action) => state;
+
+export default combineReducers({
+  value: valueReducer,
+  step: stepReducer,
+});
+
+```
+
+4. Заимпортируем редьюсер из `counter-reducer.js` в `store.js`
+
+5. В папку `Counter` добавим файл `actions-types.js`, где зафиксируем типы экшнов
+
+```
+export const INCREMENT = "counter/Increment";
+export const DECREMENT = "counter/Decrement";
+```
+
+после чего зампортируем эти данные в `counter-actions.js` и `counter-reducer.js` и будем использовать имена переменных вместо `counter/Increment` и `counter/Decrement`.
+
+Так как вся логика счетчика уехала в [counter-reducer.js]('./../src/Redux/Counter/counter-reducer.js'), хранилище `store.js` стало куда чище:
+
+```
+import { createStore, combineReducers } from "redux";
+import counterReducer from "./Counter/counter-reducer";
+
+const rootReducer = combineReducers({
+  counter: counterReducer,
+});
+
+const store = createStore(
+  rootReducer,
+  window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__()
+);
+export default store;
+
+```
