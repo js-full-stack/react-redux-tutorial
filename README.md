@@ -4,15 +4,19 @@
 
 1. [Basic](#basic)
 
-2. [Create_action](#create_action)
+2. [Создание экшнов](#create_action)
 
-3. [Action_creator](#action_creator)
+3. [Action_creators - фабрики экшнов](#action_creator)
 
 4. [Reducer](#reducer)
 
 ## Практика
 
 [Start](#start)
+
+- npm
+- Provider
+- DevTools : способы подключения
 
 ## Counter
 
@@ -29,7 +33,11 @@
 
 6. [Composition-reducers](#Composition-reducers)
 
-7. [Refactoring](#Refactoring)
+7. [AddSetStep](#AddSetStep)
+
+8. [Refactoring](#Refactoring)
+
+- [8.1 Переписываем функции и избавляемся от диспатчей в mapDispatchToProps](#Refactoring-Counter-Functions)
 
 ### Basic
 
@@ -107,7 +115,8 @@ export const action = (value) => ({
 - 4.1 Установить в браузере расширение Redux DevTools
 - 4.2 Добавить в проект пакет <a href="https://www.npmjs.com/package/redux-devtools-extension">Redux DevTools Extension's </a> `npm install --save redux-devtools-extension`
 - 4.3 Добавить `store.js` импорт `import { composeWithDevTools } from "redux-devtools-extension"`
-- 4.4 Добавить вызов `composeWithDevTools` вторым аргументом в `createStore` `const store = createStore(reducer, composeWithDevTools())`
+- 4.4 Добавить вызов `composeWithDevTools` вторым аргументом в `createStore`
+- `const store = createStore(reducer, composeWithDevTools())`
 
 Также есть другой способ подключить Redux DevTools:
 
@@ -122,7 +131,7 @@ const store = createStore(
 
 ## Counter
 
-Переведем компонент <a href='./src/components/Counter/CounterState.jsx'> Counter </a> на redux
+Переведем компонент [Counter](./src/components/Counter/CounterStateComponent.jsx) на redux
 
 1. Пропишем в `store.js` initialState - начальное значение стейта и редьюсер, которые вернет новый стейт после экшна:
 
@@ -136,7 +145,7 @@ const reducer = (state = initialState, action) => {
 
 #### Counter-actions-creators
 
-2. Создадим папку Пропишем в `actions.js` 2 экшн-креэйтора для увеличения и уменьшения значения счетчика:
+2. Пропишем в `actions.js` 2 экшн-креэйтора для увеличения и уменьшения значения счетчика:
 
 ```
 export const increment = (value) => ({
@@ -203,7 +212,7 @@ _Примечание: пока у нас 1 state для всех потенци
 
 #### Remove-state-and-methods-in-the-component
 
-Все методы прописаны в Редаксе, поэтому удаляем их из компонента. Изначально он <a href="./src/components/CounterState/CounterState.jsx">выглядел так</a>, а теперь внутри останется только jsx-разметка:
+Все методы прописаны в Редаксе, поэтому удаляем их из компонента. Изначально он [выглядел так](src/components/Counter/CounterStateComponent.jsx), а теперь внутри останется только jsx-разметка:
 
 ```
 const Counter = () => {
@@ -375,6 +384,53 @@ const store = createStore(
 
 Как видно, теперь редьюсеры максимально плоские и ничего распылять не нужно.
 
+### AddSetStep
+
+Самую малость усложним приложение, чтобы пользователь мог динамически менять `step` счетчика на страницу:
+
+1. Добавим в `Counter.jsx` разметку списка `select`:
+
+```
+<select value={step} onChange={handleChangeStep}>
+        <option value="1">1</option>
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="20">20</option>
+        <option value="50">50</option>
+      </select>
+```
+
+2. Добавим в `actions.js` action-creator для поля `step`:
+
+`export const step = (value) => ({ type: actions/setStep, payload: value, }); `
+
+3. Перепишем stepReducer на такой вид:
+
+```
+const stepReducer = (state = 1, { type, payload }) => {
+  switch (type) {
+    case SET_STEP:
+      return payload;
+
+    default:
+      return state;
+  }
+};
+```
+
+4. Добавим в `Counter.jsx` импорт экшн-криейтора `step`
+5. Добавим новый диспатч в `mapStateToProps`:
+
+`setStep: (value) => dispatch(step(value))`
+
+6. В теле компонента перед `return` пропишем функцию, которая принимает `setStep` и возвращает функцию setStep с `e.target.value` и сразу же приведем `value` к числу, т.к. `select` возвращает строку:
+
+`const handleChangeStep = (e) => setStep(Number(e.target.value))`
+
+7. Передадим эту функцию в select на событие onChange и пропишем `step` в качестве `value`:
+
+   `<select value={step} onChange={handleChangeStep}>`
+
 ### Refactoring
 
 Если логика Redux прописана в одном и том же месте, при масштабировании приложения возникнут сложности с поддержкой. Чтобы этого избежать, нужно разделить код на смысловые модули:
@@ -420,7 +476,7 @@ export const DECREMENT = "counter/Decrement";
 
 после чего зампортируем эти данные в `counter-actions.js` и `counter-reducer.js` и будем использовать имена переменных вместо `counter/Increment` и `counter/Decrement`.
 
-Так как вся логика счетчика уехала в [counter-reducer.js](/src/Redux/Counter/counter-reducer.js), хранилище `store.js` стало куда чище:
+Так как вся логика счетчика уехала в [counter-reducer.js](/src/Redux/Counter/counter-reducer.js), хранилище [store.js](./src/Redux/store.js) стало куда чище:
 
 ```
 import { createStore, combineReducers } from "redux";
@@ -437,3 +493,49 @@ const store = createStore(
 export default store;
 
 ```
+
+### Refactoring-Counter-Functions
+
+1. Добавим в `Counter.jsx` перед ретерном функции `handleIncrement` и `handleDecrement`, которые возвращают onIncrement и onDecrement, прописанные в mapDispatchToProps, и принимают в качестве аргумента `step` - значение, на которое нам нужно увеличивать и уменьшать счетчик, после чего передадим эти функции пропсами компоненту `Controls` вместо вызова анонимных функций, которые мы использовали ранее:
+
+```
+  const handleIncrement = () => onIncrement(step);
+  const handleDecrement = () => onDecrement(step);
+___________________________________________________
+  <Controls
+        onIncrement={handleIncrement}
+        onDecrement={handleDecrement}
+        step={step}
+      />
+```
+
+Последний этап - избавляемся от диспатчей в mapDispatchToProps. Чтобы сделать это, нужно в компоненте `Counter.jsx`:
+
+1. Заменить `import { increment, decrement, step} from "../../Redux/Counter/counter-actions"` на `import *as actions from "../../Redux/Counter/counter-actions"`
+2. Заменить
+
+```
+const mapDispatchToProps = (dispatch) => {
+  return {
+    onIncrement: (value) => dispatch(increment(value)),
+    onDecrement: (value) => dispatch(decrement(value)),
+    setStep: (value) => dispatch(step(value)),
+  };
+};
+```
+
+На:
+
+```
+const mapDispatchToProps = {
+  onIncrement: actions.increment,
+  onDecrement: actions.decrement,
+  setStep: actions.step,
+};
+```
+
+Теперь в `mapDispatchToProps` остался объект с экшн-криэйторами, а сам `dispatch` происходит "под капотом",
+
+Можно еще сильнее сократить код, просто передав объект с экшн-криэйторами в HOC-connect вместо mapDispatchToProps, и экшн криейтеры будут вызываться там согласно синтаксису коротких свойств объекта, но для этого придется переименовать экшн-криэйторы или передаваемые пропсы, чтобы они назывались одинаково:
+
+![Пример](./images/shortHand.jpg)

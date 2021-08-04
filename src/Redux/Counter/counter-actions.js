@@ -1,11 +1,16 @@
-import { INCREMENT, DECREMENT } from "./counter-types";
+import { INCREMENT, DECREMENT, SET_STEP } from "./counter-types";
 
-export const increment = (value) => ({
+export const onIncrement = (payload) => ({
   type: INCREMENT,
-  payload: value,
+  payload,
 });
 
-export const decrement = (value) => ({
+export const onDecrement = (payload) => ({
   type: DECREMENT,
-  payload: value,
+  payload,
+});
+
+export const setStep = (payload) => ({
+  type: SET_STEP,
+  payload,
 });
