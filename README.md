@@ -39,6 +39,14 @@
 
 - [8.1 Переписываем функции и избавляемся от диспатчей в mapDispatchToProps](#Refactoring-Counter-Functions)
 
+9. [Redux_Toolkit](#Redux_Toolkit)
+   - [ConfigureStore](#ConfigureStore)
+   - [Middlware](#Middlware)
+   - [createAction](#createAction)
+   - [Slices](#Slices)
+   - [CreateReducer](#CreateReducer)
+   - [PersistStore](#PersistStore)
+
 ### Basic
 
 Для понимания основ работы redux:
@@ -159,7 +167,7 @@ export const decrement = (value) => ({
 });
 ```
 
-**p.s [Позднее средалем рефакторинг](#refactoring)**
+**p.s [Позднее сдалем рефакторинг](#refactoring)**
 
 #### Switch-cases
 
@@ -386,7 +394,7 @@ const store = createStore(
 
 ### AddSetStep
 
-Самую малость усложним приложение, чтобы пользователь мог динамически менять `step` счетчика на страницу:
+Самую малость усложним приложение, чтобы пользователь мог динамически менять `step` счетчика через интерфейс:
 
 1. Добавим в `Counter.jsx` разметку списка `select`:
 
@@ -433,7 +441,7 @@ const stepReducer = (state = 1, { type, payload }) => {
 
 ### Refactoring
 
-Если логика Redux прописана в одном и том же месте, при масштабировании приложения возникнут сложности с поддержкой. Чтобы этого избежать, нужно разделить код на смысловые модули:
+Если логика Redux прописана в одном файле, при масштабировании приложения возникнут сложности с поддержкой. Чтобы этого избежать, нужно разделить код на смысловые модули:
 
 1. Создадим в папке `Redux` папку `Counter`
 2. В папку `Counter` добавим файл `counter-actions.js` и перенесем в него [прописанные ранее экшн-креэйторы](#Counter-actions-creators) из файла `actions.js`
@@ -539,3 +547,347 @@ const mapDispatchToProps = {
 Можно еще сильнее сократить код, просто передав объект с экшн-криэйторами в HOC-connect вместо mapDispatchToProps, и экшн криейтеры будут вызываться там согласно синтаксису коротких свойств объекта, но для этого придется переименовать экшн-криэйторы или передаваемые пропсы, чтобы они назывались одинаково:
 
 ![Пример](./images/shortHand.jpg)
+
+# Redux_Toolkit
+
+При использовании библиотеки **Redux** приходится писать много бойлерплейта. Чтобы упростить этот процесс, сосредоточившись на написании логики приложения, используется дополнительный пакет - Redux Toolkit - `npm install @reduxjs/toolkit`
+
+## ConfigureStore
+
+**configureStore** - функция в Redux Toolkit, которая используется вместо стандартной функции редакса **createStore** для создания хранилища. Особенности и возможности configureStore:
+
+- аргументы передаются в виде объекта;
+- редьюсер должен именоваться **reducer** и никак иначе;
+- свойство **reducer** можно сделать вложенным объектом, передав несколько редьюсеров. В этом случае корневой редьюсер создастся автоматически;
+- расширение для ReduxDevTools передается "под капотом", т.е. его не надо указывать в configureStore. Также в configureStore можно передать boolean `devTools: false || true`, чтобы включить или отключить девтулзы (по умолчанию - true)
+- можно передавать миддлвары.
+
+  Продолжая пример со счетчикам, применим **configureStore** для создания хранилища:
+
+  ~~import { combineReducers } from "redux";~~
+  `import { configureStore } from "@reduxjs/toolkit";`
+  `import counterReducer from "./Counter/counter-reducer";`
+
+```
+const store = configureStore({
+
+// передаем в reducer объект с редьюсером каунтера, а корневой редьюсер создается под капотом через combineReducer
+reducer: {
+counter: counterReducer,
+},
+
+// следующая строка оставит reduxDevTools только в режиме разработке
+devTools: process.env.NODE_ENV === 'development'?
+});
+
+export default store;
+```
+
+## Middlware
+
+В качестве примера добавим прослойку в configureStore, которая будет выводить логи при изменении состояния:
+
+- `npm i --save redux-logger`
+- `middleware: [logger]` - в объект configureStore
+
+Поскольку значение ключа middlware - массив, внутрь можно добавить любое количество прослоек. Но здесь важно учесть, что "под капотом" Toolkit уже добавляет дефолтные прослойки для проверки на иммутабельность, сериализации и обработки асинхронных операций через **redux-thunk**. Чтобы добавить к дефолтным прослойкам кастомную, можно заимпортировать **getDefaultMiddleware** из **@reduxjs/toolkit** и объединить прослойки методом **concat**,
+
+`middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(logger)`
+
+или через оператор **spread**:
+
+`middleware: [...getDefaultMiddleware(), logger]`
+
+Итого, `store.js` будет выглядить так:
+
+```
+import counterReducer from "./Counter/counter-reducer";
+import { configureStore, getDefaultMiddleware } from "@reduxjs/toolkit";
+import logger from "redux-logger";
+
+const middlwares = getDefaultMiddleware().concat(logger)
+
+const store = configureStore({
+  reducer: {
+    counter: counterReducer,
+  },
+  devTools: process.env.NODE_ENV === "development",
+  middleware: middlwares,
+});
+
+export default store;
+```
+
+## CreateAction
+
+При использовании нативного драйвера redux нужно прописывать action-creators - функции, которые изменяют стейт. В случае с redux-toolkit есть функция, которая упрощает эту задачу - **createAction()**
+
+Перепишем экшн-криейторы в `counter-actions.js`.
+
+Было:
+
+```
+import { INCREMENT, DECREMENT, SET_STEP } from "./counter-types";
+
+export const onIncrement = (payload) => ({
+  type: INCREMENT,
+  payload,
+});
+
+export const onDecrement = (payload) => ({
+  type: DECREMENT,
+  payload,
+});
+
+export const setStep = (payload) => ({
+  type: SET_STEP,
+  payload,
+});
+
+```
+
+Стало:
+
+От типов можно избавиться, так как в экшнах, которые созданы через createAction "под капотом" сформировано свойство type.
+Его далее и будем использовать в редьюсерах для определения неужного экшна.
+~~import { INCREMENT, DECREMENT, SET_STEP } from "./counter-types";~~
+
+```
+import { createAction } from "@reduxjs/toolkit";
+
+export const onIncrement = createAction("counter/Increment");
+export const onDecrement = createAction("counter/Decrement");
+export const setStep = createAction("counter/SetStep");
+```
+
+## CreateReducer
+
+В классическом случае редьюсеры прописываются с помощью оператора switch, где тип действия определяется в зависимости от поля type. Функция createReducer дает возможность не использовать switch/case, определяя type через синтаксис вычисляемых свойств.
+
+Ранее файл `counterReducer.js` содержал такую логику:
+
+```
+import { combineReducers } from "redux";
+
+const initialState = {
+  value: 0,
+  step: 5,
+};
+
+const valueReducer = (state = initialState.value, { type, payload }) => {
+  switch (type) {
+    case INCREMENT:
+      return state + payload;
+
+    case DECREMENT:
+      return state - payload;
+
+    default:
+      return state;
+  }
+};
+
+const stepReducer = (state = initialState.step, { type, payload }) => {
+  switch (type) {
+    case SET_STEP:
+      return payload;
+
+    default:
+      return state;
+  }
+};
+
+const counterReducer = combineReducers({
+  value: valueReducer,
+  step: stepReducer,
+});
+
+export default counterReducer;
+```
+
+**С функцией createReducer то же самое можно описать так:**
+
+От типов можно избавиться полностью.
+~~import { INCREMENT, DECREMENT, SET_STEP } from "./counter-types";~~
+
+```
+import { combineReducers } from "redux";
+import { createReducer } from "@reduxjs/toolkit";
+
+// Вместо типов используем action-creators
+import { onIncrement, onDecrement, setStep } from "./counter-actions";
+
+
+const initialState = {
+  value: 0,
+  step: 5,
+};
+
+const valueReducer = createReducer(initialState.value, {
+  [onIncrement]: (state, { payload }) => state + payload,
+  [onDecrement]: (state, { payload }) => state - payload,
+});
+
+const stepReducer = createReducer(initialState.step, {
+  [setStep]: (_, { payload }) => payload,
+});
+
+const counterReducer = combineReducers({
+  value: valueReducer,
+  step: stepReducer,
+});
+
+export default counterReducer;
+```
+
+## PersistStore
+
+Часто при разработке приложения возникает необходимость сохранять актуальные данные в стейт даже после перезагрузки страницы. Для этого есть библиотека **redux-persist** - `npm i redux-persist`. В `store.js`:
+
+1. `import { persistStore, persistReducer } from "redux-persist";`
+2. `import storage from "redux-persist/lib/storage";`
+3. Прописать persistConfig, указав ключ, под которым будут храниться данные и заимпортированный storage
+
+```
+const persistConfig = {
+  key: "root",
+  storage,
+};
+```
+
+4. Для использования persistReducer потребуется корневой редьюсер, а значит нужно использовать combineReducer
+
+```
+const rootReducer = combineReducers({ counter: counterReducer });
+const persistedReducer = persistReducer(persistConfig, rootReducer);
+```
+
+5. в configureStore теперь нужно указать для ключа reducer значение persistedReducer
+
+`reducer: persistedReducer,`
+
+также нужно экспортировать обертку для store:
+
+`export const persistore = persistStore(store);`
+
+Полный код store.js:
+
+```
+import counterReducer from "./Counter/counter-reducer";
+import {
+  configureStore,
+  getDefaultMiddleware,
+  combineReducers,
+} from "@reduxjs/toolkit";
+import { persistStore, persistReducer } from "redux-persist";
+import storage from "redux-persist/lib/storage";
+import logger from "redux-logger";
+
+const middlwares = getDefaultMiddleware().concat(logger);
+
+
+// в persistConfig также можно указать параметр whitelist или blacklist, чтобы персистор игнорировал или наоборот выбирал только ту часть стейта, которую нужно сохранить после перезагрузки
+
+const persistConfig = {
+  key: "root",
+  storage,
+};
+
+const rootReducer = combineReducers({
+  counter: persistReducer(persistConfig, counterReducer),
+});
+
+
+
+export const store = configureStore({
+  reducer: rootReducer,
+  devTools: process.env.NODE_ENV === "development",
+  middleware: middlwares,
+});
+
+export const persistore = persistStore
+```
+
+В корневом `index.js` нужно:
+
+1. Заимпортировать `import { PersistGate } from 'redux-persist/integration/react'` - этот компонент нужен, чтобы задержать рендеринг до тех пор, пока состояние не будет сохранено в redux.
+2. Обернуть приложение в PersistGate, передав полученный из `store.js` persistore как проп
+
+```
+  <PersistGate loading={null} persistor={persistor}>
+        <App />
+  </PersistGate>
+```
+
+Полный код index.js:
+
+```
+import React from "react";
+import ReactDOM from "react-dom";
+import App from "./App";
+import { Provider } from "react-redux";
+import { PersistGate } from "redux-persist/integration/react";
+import { store, persistor } from "./Redux/store";
+
+ReactDOM.render(
+  <React.StrictMode>
+    <Provider store={store}>
+      <PersistGate loading={null} persistor={persistor}>
+        <App />
+      </PersistGate>
+    </Provider>
+  </React.StrictMode>,
+  document.getElementById("root")
+);
+
+```
+
+Теперь значения счетчика сохраняются после перезагрузки страницы.
+
+В консоли можно заметить ошибку о том, связанную с попыткой поместить несериализуемые данные в хранилище. Чтобы избавиться от этой ошибки, нужно:
+
+1. Сделать `import FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER from 'redux-persist'`
+2. Добавить объект настроек в функцию getDefaultMiddleware:
+
+```
+const middlwares = getDefaultMiddleware({
+  serializableCheck: {
+    ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+  },
+}
+```
+
+## Slices
+
+Redux Toolkit предоставляет возможность использовать слайсы для управления состоянием, что позволяет вообще избавиться от экшн-криэйторов. Для примера создадим [копию счетчика](./src/components/Counter/CounterSlices.jsx), [редьюсер для него](./src/Redux/CounterSlices/counter-reducer.js), который прокинем в корневой редьюсер в `store.js`.
+
+Counter на слайсах имеет такой синтаксис:
+
+```
+import { createSlice } from "@reduxjs/toolkit";
+
+const initialState = {
+  value: 0,
+  step: 5,
+};
+
+const { actions, reducer } = createSlice({
+  // name - это "корневая" часть экшна, а название функций в объекте reducers - ....//.// конечная часть экшнов.
+  name: "counter/toolkit/slice",
+  initialState,
+  reducers: {
+    onIncrement: ({ value, payload }) => {
+      value += payload;
+    },
+    onDecrement: ({ value, payload }) => {
+      value -= payload;
+    },
+    setStep: ({ step, payload }) => {
+      step = payload;
+    },
+  },
+});
+
+export const { onIncrement, onDecrement, setStep } = actions;
+export default reducer;
+```

@@ -3,15 +3,16 @@ import Controls from "./Controls";
 import Value from "./Value";
 import "./Counter.css";
 import { connect } from "react-redux";
-import * as actions from "../../Redux/Counter/counter-actions";
+import * as actions from "../../Redux/CounterSlices/counter-reducer";
 
-const Counter = ({ value, step, setStep, onIncrement, onDecrement }) => {
+const CounterSlices = ({ value, step, setStep, onIncrement, onDecrement }) => {
   const handleChangeStep = (e) => setStep(Number(e.target.value));
   const handleIncrement = () => onIncrement(step);
   const handleDecrement = () => onDecrement(step);
 
   return (
     <div className="Counter">
+      <h2>Slices</h2>
       <select value={step} onChange={handleChangeStep}>
         <option value="1">1</option>
         <option value="5">5</option>
@@ -30,15 +31,9 @@ const Counter = ({ value, step, setStep, onIncrement, onDecrement }) => {
   );
 };
 
-const mapStateToProps = ({ counter: { value, step } }) => ({
+const mapStateToProps = ({ counterSlices: { value, step } }) => ({
   value,
   step,
 });
 
-// const mapDispatchToProps = {
-//   onIncrement: actions.increment,
-//   onDecrement: actions.decrement,
-//   setStep: actions.step,
-// };
-
-export default connect(mapStateToProps, actions)(Counter);
+export default connect(mapStateToProps, actions)(CounterSlices);
