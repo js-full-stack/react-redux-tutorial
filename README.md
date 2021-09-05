@@ -39,16 +39,15 @@
 
 - [8.1 Переписываем функции и избавляемся от диспатчей в mapDispatchToProps](#Refactoring-Counter-Functions)
 
-9. [Redux_Toolkit](#Redux_Toolkit)
+## [Redux_Toolkit](#Redux_Toolkit)
 
-   - [ConfigureStore](#ConfigureStore)
-   - [Middlware](#Middlware)
-   - [createAction](#createAction)
-   - [Slices](#Slices)
-   - [CreateReducer](#CreateReducer)
-   - [PersistStore](#PersistStore)
-   - [Slices](#Slices)
-   - [Презентационный компонент и контейнер](#Презентационный-компонент-и-контейнер)
+- [ConfigureStore](#ConfigureStore)
+- [Middlware](#Middlware)
+- [createAction](#createAction)
+- [CreateReducer](#CreateReducer)
+- [PersistStore](#PersistStore)
+- [Slices](#Slices)
+- [Презентационный компонент и контейнер](#Презентационный-компонент-и-контейнер)
 
 ---
 
@@ -60,9 +59,14 @@
 - [Code-splitting: Вынос запросов на бекенд в файл с api-сервисами](#Code-splitting)
 - [Перевод Todos на Redux(проектирование)](<#Перевод-Todos-на-Redux(проектирование)>)
 - [Перевод Todos на Redux(логика редьюсеров)](<#Перевод-Todos-на-Redux(логика-редьюсеров)>)
+
   - [AddTodo](#AddTodo)
   - [DeleteTodo](#DeleteTodo)
   - [ToggleCompleted](#ToggleCompleted)
+  - [Filter](#Filter)
+  - [Перевод Todos на Toolkit](#Перевод-Todos-на-Toolkit)
+
+## Асинхронные операции в Redux
 
 ### Basic
 
@@ -1211,5 +1215,131 @@ const mapDispatchToProps = (dispatch) => ({
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(TodoListRedux);
+
+```
+
+#### Filter
+
+**ActionCreator:**
+
+```
+export const changeFilter = (value) => ({
+  type: CHANGE_FILTER,
+  payload: value,
+});
+
+```
+
+**Dispatch:**
+
+```
+
+const filter = (state = "", { type, payload }) => {
+  switch (type) {
+    case CHANGE_FILTER:
+      return payload;
+
+    default:
+      return state;
+  }
+};
+
+```
+
+В компоненте [TodoFilter](./src/components/TodosRedux/TodoFilterRedux/TodoFilterRedux.jsx)
+
+```
+const mapStateToProps = (state) => ({
+  value: state.todos.filter,
+});
+
+const mapDispatchToProps = (dispatch) => ({
+  onChangeFilter: (e) => dispatch(changeFilter(e.target.value)),
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(TodoFilterRedux);
+```
+
+Чтобы отрисовка изменялась в зависимости от значения фильтра, необходимо немного изменить логику компонента TodoList, где мы получаем доступ ко всему списку задач:
+
+```
+//* Пишем функцию для нормализации и фильтрации
+const getVisibleTodos = (allTodos, filter) => {
+  const normalizedFilter = filter.toLowerCase();
+  return allTodos.filter(({ text }) =>
+    text.toLowerCase().includes(normalizedFilter)
+  );
+};
+
+//  * Получаем список задач и фильтр из стейта и пропускаем через функцию для нормализации
+const mapStateToProps = (state) => {
+  const { filter, items } = state.todos;
+  const visibleTodos = getVisibleTodos(items, filter);
+
+  return {
+    // * Возваращем отфильтрованные и нормализованные тудушки
+    todos: visibleTodos,
+  };
+};
+
+const mapDispatchToProps = (dispatch) => ({
+  onDeleteTodo: (todoId) => dispatch(deleteTodo(todoId)),
+  onToggleCompleted: (todoId) => dispatch(toggleCompleted(todoId)),
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(TodoListRedux);
+
+```
+
+### Перевод Todos на Toolkit
+
+[CreateActions]('./../src/Redux/Todos/todos-actions.js'):
+
+```
+import shortid from "shortid";
+import { createAction } from "@reduxjs/toolkit";
+
+// * Если payload представляет собой сложный объект (как в addTodo), для передачи всех свойств нужно использовать prepare callback
+export const addTodo = createAction("todos/Add", (text) => ({
+  payload: {
+    id: shortid.generate(),
+    text,
+    completed: false,
+  },
+}));
+export const deleteTodo = createAction("todos/Delete");
+export const toggleCompleted = createAction("todos/ToggleCompleted");
+export const changeFilter = createAction("todos/ChangeFilter");
+
+```
+
+[CreateReducers](./src/Redux/Todos/todos-reducer.js)
+
+```
+import { createReducer } from "@reduxjs/toolkit";
+import {
+  addTodo,
+  deleteTodo,
+  toggleCompleted,
+  changeFilter,
+} from "./todos-actions";
+
+const items = createReducer([], {
+  [addTodo]: (state, action) => [...state, action.payload],
+
+  [deleteTodo]: (state, action) =>
+    state.filter(({ id }) => id !== action.payload),
+
+  [toggleCompleted]: (state, action) =>
+    state.map((todo) =>
+      todo.id === action.payload
+        ? { ...todo, completed: !todo.completed }
+        : todo
+    ),
+});
+
+const filter = createReducer("", {
+  [changeFilter]: (state, action) => action.payload,
+});
 
 ```

@@ -11,8 +11,12 @@ const TodoEditorRedux = ({ onSubmit }) => {
   };
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(message);
-    setMessage("");
+    if (message.length > 0) {
+      onSubmit(message);
+      setMessage("");
+      return;
+    }
+    alert("Please enter your message");
   };
 
   return (

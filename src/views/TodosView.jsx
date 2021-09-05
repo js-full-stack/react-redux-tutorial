@@ -1,4 +1,3 @@
-import axios from "axios";
 import { useState, useEffect } from "react";
 import TodoFilter from "../components/Todos/TodoFilter";
 import TodoList from "../components/Todos/TodoList/";

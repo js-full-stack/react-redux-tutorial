@@ -8,7 +8,7 @@ const TodosViewRedux = () => {
   return (
     <>
       <TodoEditorRedux />
-      {/* <TodoFilter onChangeFilter={filterTodoList} value={filter} />   */}
+      <TodoFilterRedux />
       <TodoListRedux />
     </>
   );

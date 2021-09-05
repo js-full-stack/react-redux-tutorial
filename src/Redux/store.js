@@ -26,14 +26,14 @@ const middlwares = getDefaultMiddleware({
 }).concat(logger);
 
 const persistConfig = {
-  key: "root",
+  key: "todos",
   storage,
-  // blacklist: "step",
+  blacklist: "filter",
 };
 const rootReducer = combineReducers({
-  counter: persistReducer(persistConfig, counterReducer),
+  counter: counterReducer,
   counterSlices: counterSlicesReducer,
-  todos: todosReducer,
+  todos: persistReducer(persistConfig, todosReducer),
 });
 
 export const store = configureStore({
