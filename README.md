@@ -40,12 +40,29 @@
 - [8.1 Переписываем функции и избавляемся от диспатчей в mapDispatchToProps](#Refactoring-Counter-Functions)
 
 9. [Redux_Toolkit](#Redux_Toolkit)
+
    - [ConfigureStore](#ConfigureStore)
    - [Middlware](#Middlware)
    - [createAction](#createAction)
    - [Slices](#Slices)
    - [CreateReducer](#CreateReducer)
    - [PersistStore](#PersistStore)
+   - [Slices](#Slices)
+   - [Презентационный компонент и контейнер](#Презентационный-компонент-и-контейнер)
+
+---
+
+### [TODOS: список задач](#Todos)
+
+- [Обзор компонентов](#Обзор-компонентов)
+- [Подключение локальной БД](#Подключение-локальной-БД)
+- [CRUD-операции](#CRUD-операции)
+- [Code-splitting: Вынос запросов на бекенд в файл с api-сервисами](#Code-splitting)
+- [Перевод Todos на Redux(проектирование)](<#Перевод-Todos-на-Redux(проектирование)>)
+- [Перевод Todos на Redux(логика редьюсеров)](<#Перевод-Todos-на-Redux(логика-редьюсеров)>)
+  - [AddTodo](#AddTodo)
+  - [DeleteTodo](#DeleteTodo)
+  - [ToggleCompleted](#ToggleCompleted)
 
 ### Basic
 
@@ -740,6 +757,8 @@ const counterReducer = combineReducers({
 export default counterReducer;
 ```
 
+_Store выполняет роль обертки для хранилища. Это важно при использовании React Native, так как эта технология не предоставляет доступ к localStorage_
+
 ## PersistStore
 
 Часто при разработке приложения возникает необходимость сохранять актуальные данные в стейт даже после перезагрузки страницы. Для этого есть библиотека **redux-persist** - `npm i redux-persist`. В `store.js`:
@@ -859,7 +878,7 @@ const middlwares = getDefaultMiddleware({
 
 ## Slices
 
-Redux Toolkit предоставляет возможность использовать слайсы для управления состоянием, что позволяет вообще избавиться от экшн-криэйторов. Для примера создадим [копию счетчика](./src/components/Counter/CounterSlices.jsx), [редьюсер для него](./src/Redux/CounterSlices/counter-reducer.js), который прокинем в корневой редьюсер в `store.js`.
+Redux Toolkit предоставляет возможность использовать слайсы для управления состоянием, что позволяет избавиться от экшн-криэйторов. Для примера создадим [копию счетчика](./src/components/Counter/CounterSlices.jsx), а также [редьюсер для него](./src/Redux/CounterSlices/counter-reducer.js), который прокинем в корневой редьюсер в `store.js`.
 
 Counter на слайсах имеет такой синтаксис:
 
@@ -872,22 +891,325 @@ const initialState = {
 };
 
 const { actions, reducer } = createSlice({
-  // name - это "корневая" часть экшна, а название функций в объекте reducers - ....//.// конечная часть экшнов.
   name: "counter/toolkit/slice",
   initialState,
   reducers: {
-    onIncrement: ({ value, payload }) => {
-      value += payload;
+    onIncrement: (state, { payload }) => {
+      state.value += payload;
     },
-    onDecrement: ({ value, payload }) => {
-      value -= payload;
+    onDecrement: (state, { payload }) => {
+      state.value -= payload;
     },
-    setStep: ({ step, payload }) => {
-      step = payload;
+    setStep: (state, { payload }) => {
+      state.step = payload;
     },
   },
 });
 
 export const { onIncrement, onDecrement, setStep } = actions;
 export default reducer;
+
+```
+
+## Презентационный компонент и контейнер
+
+Для удобного переиспользования логики применяется паттерн разделения компонентов на презентационные (отвечают за отоброжение контента) и контейнерные (отвечают за логику). Вынесем работы с Редаксом в компонент-контейнер.
+
+1. Создадим файл [Counter.presentational.js](./src/components/Counter/Counter.presentational.jsx) и вынесем в него разметку счетчика.
+2. В [Counter.jsx](./src/components/Counter/Counter.jsx) и [CounterSlices.jsx](src/components/Counter/CounterSlices.jsx) оставим логику для связи с Redux. Сюда же заимпортируем презентационный компонент.
+
+Теперь логика и разметка разделены, а все необходимые данные для ререндеринга презентационный компонент получает через пропсы.
+
+![example](./images/ContainerAndPresentation.jpg)
+
+## TODOS
+
+### Обзор компонентов
+
+Приложение включает такие компоненты:
+
+- [TodoList](./src/components/Todos/TodoList/TodoList.jsx), который рендерит список задач, а также включает логику для добавления в список выполненных и удаления задач.
+- [TodoEditor](./src/components/Todos/TodoEditor/TodoEditor.jsx) с контролируемой формой для добавления новых задач.
+- [TodoFilter](./src/components/Todos/TodoFilter/TodoFilter.jsx) для фильтрации по названию задач.
+- [Stats](./src/components/Todos/Stats/Stats.jsx) для отображения статистики общего кол-ва и кол-ва выполненных задач
+- [TodosView](./src/App.js) содержит методы для удаления (**deleteTodo**), добавления новых задач (**addTodo**), добавления в список выполненных (**toggleCompleted**), фильтрации (**filterTodoList**) и отображения отфильтрованных (**getVisibleTodos**) задач, передавая компонентам необходимые данные в виде пропсов. Также **TodosView** включает стейт вида
+
+```
+const [todos, setTodos] = useState(initialTodos);
+const [filter, setFilter] = useState("");
+```
+
+начальное состояние (initialTodos) приходит из файла [todos.json](./src/todos.json)
+
+### Подключение локальной БД
+
+Локальная база данных позволяет сымитировать AJAX-запросы при добавлении, удалении и обновлении списка задач. Для ее использования нужно:
+
+1. Установить пакет `npm i json-server`
+2. Добавить в корень проекта файл [db.json](./db.json) и перенести туда данные из `todos.json`
+3. Прописать в package.json скрипт `"api-server": "json-server --delay 300 --watch db.json"`
+4. Запустить сервер командой `npm run api-server`
+
+### CRUD-операции
+
+Для работы со списком задач необходимо сформировать соответствующие запросы:
+
+1. Get-запрос на получение списка задач в ComponentDidMount или useEffect при 1-м рендеринге:
+
+```
+ useEffect(() => {
+    axios
+      .get("http://localhost:3000/todos")
+      .then(({ data }) => setTodos(data))
+      .catch((error) => console.log(error));
+  }, []);
+```
+
+2. Post-запрос на добавление новой задачи:
+
+```
+  const addTodo = (text) => {
+    const todo = {
+      text,
+      completed: false,
+    };
+    axios.post("http://localhost:3000/todos", todo);
+    setTodos([...todos, todo]);
+  };
+```
+
+3. Delete-запрос для удаления выбранной задачи:
+
+```
+  const deleteTodo = (todoId) => {
+    axios.delete(`http://localhost:3000/todos/${todoId}`).then(() => {
+      setTodos((prevTodos) => prevTodos.filter((todo) => todo.id !== todoId));
+    });
+  };
+```
+
+4. Patch-запрос для обновления состояния completed:
+
+```
+  const toggleCompleted = (todoId) => {
+    const currentTodo = todos.find(({ id }) => id === todoId);
+    const { completed } = currentTodo;
+
+    axios
+      .patch(`http://localhost:3000/todos/${todoId}`, {
+        completed: !completed,
+      })
+      .then(({ data }) => {
+        setTodos((prevTodos) =>
+          prevTodos.map((todo) =>
+            todo.id === data.id ? { ...todo, completed: !todo.completed } : todo
+          )
+        );
+      });
+  };
+```
+
+### Code-splitting
+
+![Example](./images/apiSplitting.jpg)
+
+### Перевод Todos на Redux(проектирование)
+
+Переводим работу с логикой заметок в Redux-хранилище. Для этого используем [отдельный компонент](./src/views/TodosViewRedux.jsx), чтобы не портить тот, в котором работа с todo реализована через json-server (изначально реализация будет локальной)
+
+Изначально компонент будет пустым, и последовательно передадим ему необходимую логику из Редакса:
+
+```
+import { useState, useEffect } from "react";
+import TodoFilter from "../components/Todos/TodoFilter";
+import TodoList from "../components/Todos/TodoList";
+import TodoEditor from "../components/Todos/TodoEditor";
+import Stats from "../components/Todos/Stats";
+
+const TodosViewRedux = () => {
+  return (
+    <>
+      <p>TODO-REDUX</p>
+    </>
+  );
+};
+```
+
+1. Создание экшнов в [todos-types.js](src/Redux/Todos/todos-types.js):
+
+```
+export const ADD = "todos/Add";
+export const DELETE = "todos/Delete";
+export const TOGGLE_COMPLETED = "todos/ToggleCompleted";
+export const CHANGE_FILTER = "todos/ChangeFilter";
+
+```
+
+2. Создание редьюсеров в [todos-reducer.js](./src/Redux/Todos/todos-reducer.js)
+
+Стейт для todos включает список заметок и фильтр. Для начала спроектируем хранилище, "склеим" через combineReducers и передадим в корневой редьюсер в store.js
+
+Проектирование в **todos-reducer.js**:
+
+```
+import { combineReducers } from "redux";
+
+const items = (state = [], action) => {
+  return state;
+};
+
+const filter = (state = [], action) => {
+  return state;
+};
+
+export default combineReducers({
+  items,
+  filter,
+});
+
+```
+
+Добавление в корневой редьюсер в **store.js**:
+
+```
+const rootReducer = combineReducers({
+  counter: persistReducer(persistConfig, counterReducer),
+  counterSlices: counterSlicesReducer,
+  todos: todosReducer,
+});
+```
+
+### Перевод Todos на Redux(логика редьюсеров)
+
+1. #### AddTodo
+   - в **todos.actions.js**:
+
+```
+import shortid from "shortid";
+import { ADD } from "./todos-types";
+
+export const addTodo = (text) => ({
+  type: ADD,
+  payload: {
+    id: shortid.generate(),
+    text,
+    completed: false,
+  },
+});
+```
+
+в **todos-reducer.js**:
+
+```
+import { ADD } from "./todos-types";
+
+const items = (state = [], { type, payload }) => {
+  switch (type) {
+    case ADD:
+      return [...state, payload];
+
+    default:
+      return state;
+  }
+};
+```
+
+Так как используется редакс, нет нужды прокидывать метод для добавления todo через **TodosView** в [TodoEditor](./src/components/TodosRedux/TodoEditor/TodoEditor.jsx), ведь его можно подписать на store и законнектить напрямую. Для этого достаточно:
+
+1. Заимпортировать HOC connect `import { connect } from "react-redux";`
+2. Заимпортировать экшн-криейтор AddTodo `import { addTodo } from "../../../Redux/Todos/todos-actions";`
+3. Прописать mapDispatchToProps и передать onSubmit пропом для добавления новой todo:
+
+```
+const mapDispatchToProps = (dispatch) => ({
+  onSubmit: (text) => dispatch(addTodo(text)),
+});
+
+// вместо mapStateToProps передаем null, т.к. здесь нужен только mapDispatchToProps
+export default connect(null, mapDispatchToProps)(TodoEditor);
+```
+
+![expl](./images/stepByStep.jpg)
+
+#### DeleteTodo
+
+**ActionCreator:**
+
+```
+export const deleteTodo = (todoId) => ({
+  type: DELETE,
+  payload: todoId,
+});
+
+```
+
+**Reducer** прописывается в том же Switch-Case, что и addTodo, т.к. это работа с той же коллекцией:
+
+```
+const items = (state = [], { type, payload }) => {
+  switch (type) {
+    case ADD:
+      return [...state, payload];
+
+    case DELETE:
+      return state.filter(({ id }) => id !== payload);
+    default:
+      return state;
+  }
+};
+```
+
+Отрисовка через map происходит в компоненте [TodoList](./src/components/TodosRedux/TodoList/TodoList.jsx). Как и TodoEditor, он должен напрямую подключаться к хранилищу.
+
+```
+const mapStateToProps = (state) => ({
+  todos: state.todos.items,
+});
+
+const mapDispatchToProps = (dispatch) => ({
+  onDeleteTodo: (todoId) => dispatch(deleteTodo(todoId)),
+
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(TodoList);
+```
+
+В `mapStateToProps` компонент TodoList получает весь стейт, передавая его в пропсы, после чего происходит отрисовка тудушек. `mapDispatchToProps` же отвечает за удаление тудушек. А поскольку после удаления меняются пропсы, то происходит повторный рендеринг и обновление интерфейса.
+
+#### ToggleCompleted
+
+**ActionCreator:**
+
+```
+export const toggleCompleted = (todoId) => ({
+  type: TOGGLE_COMPLETED,
+  payload: todoId,
+});
+
+```
+
+**Dispatch:**
+
+```
+   case TOGGLE_COMPLETED:
+      return state.map((todo) =>
+        todo.id === payload ? { ...todo, completed: !todo.completed } : todo
+      );
+
+```
+
+И осталось только добавить диспатч в компоненте [TodoList](./src/components/TodosRedux/TodoListRedux/TodoListRedux.jsx)::
+
+```
+const mapStateToProps = (state) => ({
+  todos: state.todos.items,
+});
+
+const mapDispatchToProps = (dispatch) => ({
+  onDeleteTodo: (todoId) => dispatch(deleteTodo(todoId)),
+  onToggleCompleted: (todoId) => dispatch(toggleCompleted(todoId)),
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(TodoListRedux);
+
 ```

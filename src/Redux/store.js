@@ -1,5 +1,6 @@
 import counterReducer from "./Counter/counter-reducer";
 import counterSlicesReducer from "./CounterSlices/counter-reducer";
+import todosReducer from "./Todos/todos-reducer";
 import {
   configureStore,
   getDefaultMiddleware,
@@ -32,9 +33,8 @@ const persistConfig = {
 const rootReducer = combineReducers({
   counter: persistReducer(persistConfig, counterReducer),
   counterSlices: counterSlicesReducer,
+  todos: todosReducer,
 });
-// const rootReducer = combineReducers({ counter: counterReducer });
-// const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 export const store = configureStore({
   reducer: rootReducer,
