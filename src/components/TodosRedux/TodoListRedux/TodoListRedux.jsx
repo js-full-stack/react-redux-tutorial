@@ -1,10 +1,11 @@
-import React from "react";
+import { useDispatch } from "react";
 import { connect } from "react-redux";
 import classNames from "classnames";
+
 import {
   deleteTodo,
   toggleCompleted,
-} from "../../../Redux/Todos/todos-actions";
+} from "../../../Redux/Todos/todos-operations";
 
 import "./TodoList.scss";
 const TodoListRedux = ({ todos, onDeleteTodo, onToggleCompleted }) => {
@@ -22,7 +23,7 @@ const TodoListRedux = ({ todos, onDeleteTodo, onToggleCompleted }) => {
               type="checkbox"
               className="TodoList__checkbox"
               checked={completed}
-              onChange={() => onToggleCompleted(id)}
+              onChange={() => onToggleCompleted({ id, completed: !completed })}
             />
             <p className="TodoList__text">{text}</p>
             <button

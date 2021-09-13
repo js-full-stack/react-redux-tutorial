@@ -1,5 +1,4 @@
 import "./Stats.scss";
-
 const Stats = ({ total, completed }) => (
   <div className="Stats">
     <p className="Stats__item">

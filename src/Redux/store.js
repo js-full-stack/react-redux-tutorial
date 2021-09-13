@@ -1,6 +1,7 @@
 import counterReducer from "./Counter/counter-reducer";
 import counterSlicesReducer from "./CounterSlices/counter-reducer";
 import todosReducer from "./Todos/todos-reducer";
+
 import {
   configureStore,
   getDefaultMiddleware,
@@ -19,27 +20,34 @@ import {
 import storage from "redux-persist/lib/storage";
 import logger from "redux-logger";
 
-const middlwares = getDefaultMiddleware({
+const myCustomMiddlware = (store) => (next) => (action) => {
+  console.log("Срабатывает каждый раз при экшне");
+
+  // return next(action) передает управление дальше
+  return next(action);
+};
+
+const middleware = getDefaultMiddleware({
   serializableCheck: {
     ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
   },
-}).concat(logger);
+}).concat(myCustomMiddlware, logger);
 
 const persistConfig = {
-  key: "todos",
+  key: "root",
   storage,
-  blacklist: "filter",
+  blacklist: "step",
 };
 const rootReducer = combineReducers({
-  counter: counterReducer,
+  counter: persistReducer(persistConfig, counterReducer),
   counterSlices: counterSlicesReducer,
-  todos: persistReducer(persistConfig, todosReducer),
+  todos: todosReducer,
 });
 
 export const store = configureStore({
   reducer: rootReducer,
   devTools: process.env.NODE_ENV === "development",
-  middleware: middlwares,
+  middleware,
 });
 
 export const persistor = persistStore(store);

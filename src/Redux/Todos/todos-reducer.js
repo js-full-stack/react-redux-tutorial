@@ -1,31 +1,63 @@
 import { combineReducers } from "redux";
-import { createReducer, createSlice } from "@reduxjs/toolkit";
+import { createReducer } from "@reduxjs/toolkit";
 import {
-  addTodo,
-  deleteTodo,
-  toggleCompleted,
+  addTodoRequest,
+  addTodoSuccess,
+  addTodoError,
+  fetchTodosRequest,
+  fetchTodosSuccess,
+  fetchTodosError,
+  deleteTodoRequest,
+  deleteTodoSuccess,
+  deleteTodoError,
+  toggleCompletedRequest,
+  toggleCompletedSuccess,
+  toggleCompletedError,
   changeFilter,
 } from "./todos-actions";
 
 const items = createReducer([], {
-  [addTodo]: (state, { payload }) => [...state, payload],
+  [fetchTodosSuccess]: (_, { payload }) => payload,
+  [addTodoSuccess]: (state, { payload }) => [...state, payload],
 
-  [deleteTodo]: (state, { payload }) =>
+  [deleteTodoSuccess]: (state, { payload }) =>
     state.filter(({ id }) => id !== payload),
 
-  [toggleCompleted]: (state, { payload }) =>
-    state.map((todo) =>
-      todo.id === payload ? { ...todo, completed: !todo.completed } : todo
-    ),
+  [toggleCompletedSuccess]: (state, { payload }) =>
+    state.map((todo) => (todo.id === payload.id ? payload : todo)),
 });
 
 const filter = createReducer("", {
   [changeFilter]: (state, { payload }) => payload,
 });
 
+const loading = createReducer(false, {
+  [fetchTodosRequest]: () => true,
+  [fetchTodosSuccess]: () => false,
+  [fetchTodosError]: () => false,
+  [addTodoRequest]: () => true,
+  [addTodoSuccess]: () => false,
+  [addTodoError]: () => false,
+  [deleteTodoRequest]: () => true,
+  [deleteTodoSuccess]: () => false,
+  [deleteTodoError]: () => false,
+  [toggleCompletedRequest]: () => true,
+  [toggleCompletedSuccess]: () => false,
+  [toggleCompletedError]: () => false,
+});
+
+const error = createReducer(null, {
+  [fetchTodosError]: (_, { payload }) => payload,
+  [addTodoError]: (_, { payload }) => payload,
+  [deleteTodoError]: (_, { payload }) => payload,
+  [toggleCompletedError]: (_, { payload }) => payload,
+});
+
 export default combineReducers({
   items,
   filter,
+  loading,
+  error,
 });
 
 // import { ADD, DELETE, TOGGLE_COMPLETED, CHANGE_FILTER } from "./todos-types";

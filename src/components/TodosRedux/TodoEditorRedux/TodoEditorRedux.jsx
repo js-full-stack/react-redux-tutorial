@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./TodoEditor.scss";
 import { connect } from "react-redux";
-import { addTodo } from "../../../Redux/Todos/todos-actions";
+import { addTodo } from "../../../Redux/Todos/todos-operations";
 const TodoEditorRedux = ({ onSubmit }) => {
   const [message, setMessage] = useState("");
 
@@ -37,5 +37,4 @@ const mapDispatchToProps = (dispatch) => ({
   onSubmit: (text) => dispatch(addTodo(text)),
 });
 
-// вместо mapStateToProps передаем null, т.к. здесь нужен только mapDispatchToProps
 export default connect(null, mapDispatchToProps)(TodoEditorRedux);

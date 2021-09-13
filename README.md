@@ -66,9 +66,18 @@
   - [Filter](#Filter)
   - [Перевод Todos на Toolkit](#Перевод-Todos-на-Toolkit)
 
-## Асинхронные операции в Redux
+## [Асинхронные операции в Redux](Асинхронные-операции-в-Redux)
 
-### Basic
+- [Кастомные миддлвары](#Кастомные-миддлвары)
+- [Миддлвар thunk для работы с асинхронными операциями](#Миддлвар-thunk-для-работы-с-асинхронными-операциями)
+- [Практика работы с асинхронными запросами в Redux](#Практика-работы-с-асинхронными-запросами-в-Redux)
+  1. [Добавление Todo](#Добавление-Todo)
+  2. [Удаление Todo](#Удаление-Todo)
+  3. [Toggle Todo](#Toggle-Todo)
+  4. [Fetch Todos](#fetch-todos)
+  5. [Пример с хуком useDispatch вместо mapDispatchToProps](#Пример-с-хуком-useDispatch-вместо-mapDispatchToProps)
+  6. [Редьюсер loadind](#Редьюсер-loadind)
+  7. [Добавление спиннера](#Добавление-спиннера)
 
 Для понимания основ работы redux:
 
@@ -1343,3 +1352,372 @@ const filter = createReducer("", {
 });
 
 ```
+
+---
+
+## Асинхронный Redux
+
+### Кастомные миддлвары
+
+Помимо встроенных и устанавливаемых в виде пакетов прослоек, Redux предоставляет возможность писать кастомные миддлвары, которые можно использовать для сбора аналитики, обработки запросов на сервер и др. целей.
+
+![Ex](./images/conspect.jpg)
+
+Прослойки создаются с помощью каррированных функций
+
+`const middleware = store => next => action => {};`
+
+**store** - ссылка на хранилище
+**next** - передает прослойку в след.миддлвар или редьюсер
+**action** - действие, которое нужно выполнить
+
+Прослойка добавляется так:
+
+```
+const myCustomMiddlware = (store) => (next) => (action) => {
+  console.log("Срабатывает каждый раз при экшне");
+
+  // return next(action) передает управление дальше
+  return next(action);
+};
+
+const middlwares = getDefaultMiddleware({
+  serializableCheck: {
+    ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+  },
+}).concat(myCustomMiddlware, logger);
+```
+
+### Миддлвар thunk для работы с асинхронными операциями
+
+Для работы с асинхронными запросами используется прослойка thunk, которую можно установить
+[npm i redux-thunk](https://www.npmjs.com/package/redux-thunk)
+
+и далее
+
+```
+import { createStore, applyMiddleware } from 'redux';
+import thunk from 'redux-thunk';
+
+const store = createStore(
+  rootReducer,
+  applyMiddleware(thunk)
+);
+```
+
+Если же используется ReduxToolkit, эта прослойка изначально есть в дефолтных миддлварах
+
+### Практика работы с асинхронными запросами в Redux
+
+Для имитации базы данных используем json-server. Инструкция по установке и настройке есть [выше](#Подключение-локальной-БД)
+
+Особенность работы с http-запросами через redux заключается в том, что для этого необходимо создавать _экшн-криэйторы, которые возвращают функцию, а не объект_:
+
+```
+const asyncActionCreator = args => dispatch => {
+  // здесь должна быть логика для http-запроса
+ }`
+```
+
+Перепишем логику в файле [todos-actions.js](./src/Redux/Todos/todos-actions.js)
+
+### Добавление Todo
+
+**Add Todo** раньше:
+
+```
+export const addTodo = createAction("todos/Add", (text) => ({
+  payload: {
+    id: shortid.generate(),
+    text,
+    completed: false,
+  },
+}));
+
+```
+
+Теперь:
+
+```
+export const addTodo = (text) => (dispatch) => {
+  const todo = { text, completed: false };
+
+  // Первый диспатч делается, чтобы можно было ставить loader при начале загрузки
+  dispatch({ type: "todos/addTodoRequest" });
+  axios
+    .post("/todos", todo)
+    .then(({ data }) =>
+      // Диспатчится уже синхронный экшн с data или error
+      dispatch({ type: "todos/addTodoSuccess", payload: data })
+    )
+    .catch((error) => dispatch({ type: "todos/addTodoError", payload: error }));
+};
+```
+
+_В counter-reducer теперь нужно изменить тип с [addTodo] на addTodoSuccess, так как отправка данных должна происходить только при успешном запросе_
+`"todos/addTodoSuccess": (state, { payload }) => [...state, payload]`
+
+![test](./images/testTodoSuccess.jpg)
+
+Логике http-запроса не место в экшн-криейтере, поэтому ее стоит перенести в файл с операциями - [todos-operations.js](./src/Redux/Todos/todos-operations.js)
+
+В **todos-actons.js** пропишем экшны и заэкспортируем их в todos.operations.js:
+
+```
+import { createAction } from "@reduxjs/toolkit";
+
+const addTodoRequest = createAction("todos/addTodoRequest");
+const addTodoSuccess = createAction("todos/addTodoSuccess");
+const addTodoError = createAction("todos/addTodoError");
+```
+
+Тогда в todos-operations будет:
+
+```
+import axios from "axios";
+import { addTodoRequest, addTodoSuccess, addTodoError } from "./todos-actions";
+axios.defaults.baseURL = "http://localhost:3000";
+export const addTodo = (text) => (dispatch) => {
+  const todo = {
+    text,
+    completed: false,
+  };
+
+  dispatch(addTodoRequest());
+  axios
+    .post("/todos", todo)
+    .then(({ data }) => dispatch(addTodoSuccess(data)))
+    .catch((error) => dispatch(addTodoError(error)));
+};
+
+```
+
+а в [todoEditor](./src/components/TodosRedux/TodoEditorRedux/TodoEditorRedux.jsx) меняется импорт с **todos-actions** на **todos-operations**
+
+`import { addTodo } from "../../../Redux/Todos/todos-operations";`
+
+### Удаление Todo
+
+Тем же способом рефакторятся и другие запросы.
+
+Экшн-криейторы на удаление:
+
+```
+export const deleteTodoRequest = createAction("todos/deleteTodoRequest");
+export const deleteTodoSuccess = createAction("todos/deleteTodoSuccess");
+export const deleteTodoError = createAction("todos/deleteTodoError");
+```
+
+Операция на удаление:
+
+```
+export const deleteTodo = (todoId) => (dispatch) => {
+  dispatch(deleteTodoRequest());
+
+  axios
+    .delete(`todos/${todoId}`)
+    .then(() => dispatch(deleteTodoSuccess(todoId)))
+    .catch((error) => deleteTodoError(error));
+};
+
+```
+
+В **todos-reducer** заменить экшн-криейтор deleteTodo на **deleteTodoSuccess**
+
+```
+[deleteTodoSuccess]: (state, { payload }) =>
+    state.filter(({ id }) => id !== payload)
+```
+
+В [todoListRedux](./src/components/TodosRedux/TodoListRedux/TodoListRedux.jsx) заменить импорт на
+
+`import { deleteTodo } from "../../../Redux/Todos/todos-operations";`
+
+### Toggle Todo
+
+Action-creators:
+
+```
+export const toggleCompletedTodoRequest = createAction(
+  "todos/toggleCompletedTodoRequest"
+);
+export const toggleCompletedTodoSuccess = createAction(
+  "todos/toggleCompletedTodoSuccess"
+);
+export const toggleCompletedTodoError = createAction(
+  "todos/toggleCompletedTodoError"
+);
+```
+
+Operation:
+
+```
+export const toggleCompleted = ({ id, completed }) => (dispatch) => {
+  const update = { completed };
+  dispatch(toggleCompletedTodoRequest());
+  axios
+    .patch(`/todos/${id}`, update)
+    .then(({ data }) => dispatch(toggleCompletedTodoSuccess(data)));
+};
+
+```
+
+В редьюсере вместо:
+
+```
+  [toggleCompletedTodoSuccess]: (state, { payload }) =>
+    state.map((todo) =>
+      todo.id === payload ? { ...todo, completed: !todo.completed } : todo
+```
+
+Это:
+
+```
+ [toggleCompletedTodoSuccess]: (state, { payload }) =>
+    state.map((todo) => (todo.id === payload.id ? payload : todo)),
+```
+
+В [todoList.jsx](./src/components/TodosRedux/TodoListRedux/TodoListRedux.jsx) меняется импорт на
+
+`import {toggleCompleted} from "../../../Redux/Todos/todos-operations";`
+
+А в `onChange` для чекбокса передается объект, где, помимо id, добавляется инверсия для свойства completed:
+
+`onChange={() => onToggleCompleted({ id, completed: !completed })}`
+
+### Fetch todos
+
+Чтобы при старте todos сразу же получать записанные данные, добавим экшны и операции для Fetch todos.
+
+Actions-creators:
+
+```
+export const fetchTodosRequest = createAction("todos/fetchTodosRequest");
+export const fetchTodosSuccess = createAction("todos/fetchTodosSuccess");
+export const fetchTodosError = createAction("todos/fetchTodosError");
+```
+
+Operation:
+
+```
+export const fetchTodos = () => (dispatch) => {
+  dispatch(fetchTodosRequest());
+  axios
+    .get("/todos")
+    .then(({ data }) => dispatch(fetchTodosSuccess(data)))
+    .catch((error) => fetchTodosError(error));
+};
+
+
+```
+
+Теперь на странице [todosViewRedux](./src/views/TodosViewRedux.jsx) забираем список todo при первом рендеринге:
+
+```
+useEffect(() => {
+    fetchTodos()
+
+  }, []);
+```
+
+#### Пример с хуком useDispatch вместо mapDispatchToProps
+
+Вместо использования mapDispatchToProps можно использовать хук `useDispatch()` из библиотеки `react-redux`. Пример с fetchTodos:
+
+```
+`import { useDispatch } from "react-redux";`
+
+const dispatch = useDispatch();
+
+ useEffect(() => {
+   dispatch(fetchTodos());
+ }, []);
+```
+
+### Редьюсер loadind
+
+При работе с CRUD-операциями экшн-криейторы можно использовать для показывания спиннера при загрузке. Для этого нужно создать еще один редьюсер, вернув _true_ или _false_ в зависимости от того завершилась или не завершилась загрузка:
+
+```
+const loading = createReducer(false, {
+  [addTodoRequest]: () => true,
+  [addTodoSuccess]: () => false,
+  [addTodoError]: () => false,
+  [deleteTodoRequest]: () => true,
+  [deleteTodoSuccess]: () => false,
+  [deleteTodoError]: () => false,
+  [toggleCompletedTodoRequest]: () => true,
+  [toggleCompletedTodoSuccess]: () => false,
+  [toggleCompletedTodoError]: () => false,
+});
+
+export default combineReducers({
+  items,
+  filter,
+  loading,
+});
+```
+
+![fetch](./images/fetch.jpg)
+
+Чтобы получать todoList при первом рендере, осталось сделать обработку запроса в [todos-reducer](./src/Redux/Todos/todos-reducer.js):
+
+```
+const items = createReducer([], {
+  [fetchTodosSuccess]: (_, {payload}) => payload,
+  [addTodoSuccess]: (state, { payload }) => [...state, payload],
+
+  [deleteTodoSuccess]: (state, { payload }) =>
+    state.filter(({ id }) => id !== payload),
+
+  [toggleCompletedTodoSuccess]: (state, { payload }) =>
+    state.map((todo) =>
+      todo.id === payload ? { ...todo, completed: !todo.completed } : todo
+    ),
+});
+
+```
+
+И добавить экшны для в редьюсер loader:
+
+```
+const loading = createReducer(false, {
+  [fetchTodosRequest]: () => true,
+  [fetchTodosSuccess]: () => false,
+  [fetchTodosError]: () => false,
+  [addTodoRequest]: () => true,
+  [addTodoSuccess]: () => false,
+  [addTodoError]: () => false,
+  [deleteTodoRequest]: () => true,
+  [deleteTodoSuccess]: () => false,
+  [deleteTodoError]: () => false,
+  [toggleCompletedTodoRequest]: () => true,
+  [toggleCompletedTodoSuccess]: () => false,
+  [toggleCompletedTodoError]: () => false,
+});
+```
+
+### Добавление спиннера
+
+Чтобы добавить спиннер, нужно:
+
+1. Получить в компоненте TodosViewRedux состояние загрузки из state.todos.loading
+
+```
+const mapStateToProps = (state) => ({
+  isLoading: state.todos.loading,
+});
+```
+
+2. Подключить этот проп через connect:
+
+```
+export default connect(mapStateToProps, mapDispatchToProps)(TodosViewRedux);
+
+```
+
+3. Передать проп в компонент.
+
+Теперь в зависимости от состояния загрузки (true или false) можно показывать какой-либо спиннер. При request состояние будет в true, а при success или error переходить в false.
+
+`{isLoading && <p>Загружаем...</p>}`
