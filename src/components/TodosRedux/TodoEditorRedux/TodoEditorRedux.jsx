@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./TodoEditor.scss";
 import { connect } from "react-redux";
-import { addTodo } from "../../../Redux/Todos/todos-operations";
+import { addTodo } from "../../../Redux/Todos/";
 const TodoEditorRedux = ({ onSubmit }) => {
   const [message, setMessage] = useState("");
 

@@ -1,8 +1,11 @@
+import { connect, useSelector } from "react-redux";
+import { getAllTodos } from "../../../Redux/Todos/";
 import "./Stats.scss";
-import { connect } from "react-redux";
+import { useMemo } from "react";
 
 const StatsRedux = ({ allTodos }) => {
-  const todoCompleted = allTodos.filter(({ completed }) => completed);
+  // const allTodos = useSelector((state) => state.todos.items);
+  const completedTodoCount = allTodos.filter(({ completed }) => completed);
 
   return (
     <div className="Stats">
@@ -11,7 +14,7 @@ const StatsRedux = ({ allTodos }) => {
         <span className="Stats__label">Всего:</span>
       </p>
       <p className="Stats__item">
-        <span className="Stats__value">{todoCompleted.length}</span>
+        <span className="Stats__value">{completedTodoCount.length}</span>
 
         <span className="Stats__label">Выполнено: </span>
       </p>
@@ -20,7 +23,8 @@ const StatsRedux = ({ allTodos }) => {
 };
 
 const mapStateToProps = (state) => ({
-  allTodos: state.todos.items,
+  allTodos: getAllTodos(state),
 });
 
 export default connect(mapStateToProps, null)(StatsRedux);
+// export default StatsRedux;

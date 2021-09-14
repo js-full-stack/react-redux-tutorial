@@ -1,11 +1,8 @@
-import { useDispatch } from "react";
 import { connect } from "react-redux";
 import classNames from "classnames";
 
-import {
-  deleteTodo,
-  toggleCompleted,
-} from "../../../Redux/Todos/todos-operations";
+import { deleteTodo, toggleCompleted } from "../../../Redux/Todos/";
+import { getVisibleTodos } from "../../../Redux/Todos/";
 
 import "./TodoList.scss";
 const TodoListRedux = ({ todos, onDeleteTodo, onToggleCompleted }) => {
@@ -40,24 +37,9 @@ const TodoListRedux = ({ todos, onDeleteTodo, onToggleCompleted }) => {
   );
 };
 
-//* Пишем функцию для нормализации и фильтрации
-const getVisibleTodos = (allTodos, filter) => {
-  const normalizedFilter = filter.toLowerCase();
-  return allTodos.filter(({ text }) =>
-    text.toLowerCase().includes(normalizedFilter)
-  );
-};
-
-//  * Получаем список задач и фильтр из стейта и пропускаем через функцию для нормализации
-const mapStateToProps = (state) => {
-  const { filter, items } = state.todos;
-  const visibleTodos = getVisibleTodos(items, filter);
-
-  return {
-    // * Возваращем отфильтрованные и нормализованные тудушки
-    todos: visibleTodos,
-  };
-};
+const mapStateToProps = (state) => ({
+  todos: getVisibleTodos(state),
+});
 
 const mapDispatchToProps = (dispatch) => ({
   onDeleteTodo: (todoId) => dispatch(deleteTodo(todoId)),

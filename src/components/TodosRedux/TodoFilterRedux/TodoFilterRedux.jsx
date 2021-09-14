@@ -1,6 +1,8 @@
 import "./TodoFilter.scss";
 import { connect } from "react-redux";
 import { changeFilter } from "../../../Redux/Todos/todos-actions";
+import { getFilterValue } from "../../../Redux/Todos/todos-selectors";
+
 const TodoFilterRedux = ({ value, onChangeFilter }) => (
   <div className="TodoFilter">
     <label className="TodoFilter__label">
@@ -16,7 +18,7 @@ const TodoFilterRedux = ({ value, onChangeFilter }) => (
 );
 
 const mapStateToProps = (state) => ({
-  value: state.todos.filter,
+  value: getFilterValue(state),
 });
 
 const mapDispatchToProps = (dispatch) => ({

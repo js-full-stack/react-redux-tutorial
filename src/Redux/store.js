@@ -1,6 +1,6 @@
 import counterReducer from "./Counter/counter-reducer";
 import counterSlicesReducer from "./CounterSlices/counter-reducer";
-import todosReducer from "./Todos/todos-reducer";
+import { todosReducer } from "./Todos";
 
 import {
   configureStore,
@@ -31,7 +31,7 @@ const middleware = getDefaultMiddleware({
   serializableCheck: {
     ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
   },
-}).concat(myCustomMiddlware, logger);
+}); /* .concat(myCustomMiddlware, logger) */
 
 const persistConfig = {
   key: "root",

@@ -66,7 +66,7 @@
   - [Filter](#Filter)
   - [Перевод Todos на Toolkit](#Перевод-Todos-на-Toolkit)
 
-## [Асинхронные операции в Redux](Асинхронные-операции-в-Redux)
+## [Асинхронный Redux](#Асинхронный-Redux)
 
 - [Кастомные миддлвары](#Кастомные-миддлвары)
 - [Миддлвар thunk для работы с асинхронными операциями](#Миддлвар-thunk-для-работы-с-асинхронными-операциями)
@@ -76,10 +76,17 @@
   3. [Toggle Todo](#Toggle-Todo)
   4. [Fetch Todos](#fetch-todos)
   5. [Пример с хуком useDispatch вместо mapDispatchToProps](#Пример-с-хуком-useDispatch-вместо-mapDispatchToProps)
-  6. [Редьюсер loadind](#Редьюсер-loadind)
-  7. [Добавление спиннера](#Добавление-спиннера)
+  6. [Пример с useSelector вместо mapStateToProps](#Пример-с-useSelector-вместо-mapStateToProps)
+  7. [Редьюсер loadind](#Редьюсер-loadind)
+  8. [Добавление спиннера](#Добавление-спиннера)
 
-Для понимания основ работы redux:
+## [Селекторы и библиотека reselect](#Селекторы-и-библиотека-reselect)
+
+- [Мемоизация селекторов](#Мемоизация-селекторов)
+- [Мемоизация с помощью хука useMemo](#Мемоизация-с-помощью-хука-useMemo)
+- [Реэкспорты](#Реэкспорты)
+
+  Для понимания основ работы redux:
 
 1. Создать папку redux, а в ней файл `store.js`;
 2. В `store.js`:
@@ -1634,6 +1641,28 @@ const dispatch = useDispatch();
  }, []);
 ```
 
+#### Пример с useSelector вместо mapStateToProps
+
+useSelector - альтернатива mapStateToProps. Пример в компоненте [statsRedux](./src/components/TodosRedux/StatsRedux/StatsRedux.jsx):
+
+Вместо:
+
+```
+const mapStateToProps = (state) => ({
+  allTodos: getAllTodos(state),
+ });
+
+```
+
+Так:
+
+```
+const StatsRedux = ({ allTodos }) => {
+  const allTodos = useSelector((state) => state.todos.items);
+```
+
+Таким образом, с помощью хуков **useDispatch** и **useSelector** можно избежать использования mapDispatchToProps, mapStateToProps и использования функции **connect**
+
 ### Редьюсер loadind
 
 При работе с CRUD-операциями экшн-криейторы можно использовать для показывания спиннера при загрузке. Для этого нужно создать еще один редьюсер, вернув _true_ или _false_ в зависимости от того завершилась или не завершилась загрузка:
@@ -1721,3 +1750,253 @@ export default connect(mapStateToProps, mapDispatchToProps)(TodosViewRedux);
 Теперь в зависимости от состояния загрузки (true или false) можно показывать какой-либо спиннер. При request состояние будет в true, а при success или error переходить в false.
 
 `{isLoading && <p>Загружаем...</p>}`
+
+### Обработка ошибок
+
+Добавим всплывающее окно в случае ошибок при запросах на бекенд:
+
+1. Установка пакета `npm i react-toastify`
+2. Импорты d [TodosViewRedux](./src/views/TodosViewRedux.jsx) или [app.js]('/../src/App.js)
+
+```
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+```
+
+3. В [todos-operations](./src/Redux/Todos/todos-operations.js)
+
+```
+import { toast } from 'react-toastify';
+
+```
+
+4. В блоке catch для каждой функции
+
+`toast.error(error.message);`
+
+или написать 1 функцию и вставить ее в каждый блок catch:
+
+`const errorHandler = (errorMessage) => toast.error(errorMessage);`
+
+## Селекторы и библиотека reselect
+
+Селекторы - это обычные функции, которые получают стейт целиком и возвращают его куски. Их цель - миримизировать изменения в компонентах при масштабировании приложения и изменении структуры хранилища.
+
+Для создания селекторов создадим в папке Redux файл [todos-selectors.js](src/Redux/Todos/todos-selectors.js). Опишем для начала простые селектры:
+
+```
+export const getLoading = (state) => state.todos.loading;
+export const getFilterValue = (state) => state.todos.filter;
+
+```
+
+**TodosViewRedux**:
+
+```
+import { getLoading } from "../Redux/Todos/todos-selectors";
+
+const mapStateToProps = (state) => ({
+  isLoading: getLoading(state),
+});
+```
+
+**TodoFilterRedux**
+
+```
+const mapStateToProps = (state) => ({
+  value: getFilterValue(state),
+});
+```
+
+В [TodosListRedux](../react-redux-tutorial/src/components/TodosRedux/TodoListRedux/TodoListRedux.jsx) нужно получить сразу же все todo (items) и фильтер (filter), чтобы далее отобразить только те из них, которые прошли фильтрацию:
+
+```
+const getVisibleTodos = (allTodos, filter) => {
+  const normalizedFilter = filter.toLowerCase();
+  return allTodos.filter(({ text }) =>
+    text.toLowerCase().includes(normalizedFilter)
+  );
+};
+
+
+
+```
+
+Для этого можно написать композитный селектор, где фильтр будет взят из селектора getFilterValue, а для получения всех todo написать еще 1 селектор:
+
+```
+export const getFilterValue = (state) => state.todos.filter;
+export const getAllTodos = (state) => state.todos.items;
+
+export const getVisibleTodos = (state) => {
+  const filter = getFilterValue(state);
+  const allTodos = getAllTodos(state);
+  const normalizedFilter = filter.toLowerCase();
+  return allTodos.filter(({ text }) =>
+    text.toLowerCase().includes(normalizedFilter)
+  );
+};
+
+```
+
+![ex](images/select.jpg)
+
+### Мемоизация селекторов
+
+Каждый раз при изменении стейта вызывается функция mapStateToProps, что приводит к ререндеру компонента и плохо отражается на производительности. Мемоизация дает возможность закешировать предыдущие вычисления и получить их из памяти при следующих вызовах функции.
+
+Для мемоизации селекторов есть библиотека reselect:
+
+```
+npm install reselect
+import { createSelector } from 'reselect';
+```
+
+В ReduxToolkit функция createSelector уже есть "под капотом", поэтому библиотеку устанавливать не нужно.
+
+`import {createSelector} from '@reduxjs/toolkit'`
+
+Форма записи для мемоизации:
+
+```
+const fn = createSelector([args], () =>{
+  calculations
+})
+```
+
+- 1 аргумент - args - включает массив селекторов (функций), которые нужно мемоизировать
+- 2 аргумент - функция, которая возвращает из себя необходимые вычисления
+
+Лучше всего функции с мемоизацией показывают себя там, где выполняются сложные, ресурсоёмкие вычисления. В нашем случае наиболее ресурсоемкие вычисления производятся в селекторе **getVisibleTodos**, его и имеет смысл мемоизировать:
+
+До:
+
+export const getVisibleTodos = (state) => {
+const filter = getFilterValue(state);
+const allTodos = getAllTodos(state);
+const normalizedFilter = filter.toLowerCase();
+return allTodos.filter(({ text }) =>
+text.toLowerCase().includes(normalizedFilter)
+);
+};
+
+После:
+
+```
+export const getVisibleTodos = createSelector(
+  [getFilterValue, getAllTodos],
+  (filter, allTodos) => {
+    const normalizedFilter = filter.toLowerCase();
+    return allTodos.filter(({ text }) =>
+      text.toLowerCase().includes(normalizedFilter)
+    );
+  }
+);
+```
+
+Теперь тело функции getVisibleTodos будет выполняться только в том случае, если изменится массив todos или filter. В остальных же случаях изменения других кусков стейта не будут вызывать ререндеринг.
+
+### Мемоизация с помощью хука useMemo
+
+В компоненте [CounterStateComponent](./src/components/Counter/CounterStateComponent.jsx) есть абсолютно 2 идентичных счетчика
+
+```
+ const [count, setCount] = useState(0);
+ const [count2, setCount2] = useState(0);
+
+  const handleIncrement = () => {
+    setCount((prevCount) => prevCount + 1);
+  };
+
+  const handleIncrement2 = () => {
+    setCount2((prevCount) => prevCount + 1);
+  };
+
+  const handleDecrement = () => {
+    setCount((prevCount) => prevCount - 1);
+  };
+
+  const handleDecrement2 = () => {
+    setCount2((prevCount) => prevCount - 1);
+  };
+
+```
+
+Проблема в том, что стейт №2 также используется для реализации функции checkResult в компоненте [CheckForNumber](./src/components/Counter/CheckForNumber.jsx), которая проверяет, равно ли выводимое число 10 и в зависимости от этого рендерит соответствующее сообщение. Для имитации сложных вычислений в эту функцию добавлен цикл while, делающий перебор от 0 до 500000000. Этот перебор делается каждый раз при клике на кнопку инкремента или декремента, из-за чего отрисовка происходит с задержкой примерно в секунду.
+
+```
+ const checkResult = () => {
+    let i = 0;
+    while (i < 500000000) i++;
+    return count === 10 ? "Число равно 10!" : "Число НЕ равно 10!";
+  };
+return {
+    </div>
+      {checkResult()}
+    </div>
+}
+
+```
+
+Но дело в том, что задержка происходит также для для счетчика №1, так как для них обоих используются одни и те же вспомогательные компоненты.
+
+Именно такого рода проблемы позволяет решить хук useMemo(). Все что нужно сделать - обернуть функцию checkResult в этот хук, а в конце указать массив зависимостей, при изменении которых будет происходить вызов функции. Синтаксис очень похож на синтаксис useEffect:
+
+```
+const checkNumber = useMemo(() => {
+    let i = 0;
+    while (i < 500000000) i++;
+    return value === 10 ? "Это 10!" : "Это НЕ 10!";
+  }, [value]);
+```
+
+В такой записи checkNumber - это строка, а не функция, а всю работы "под капотом" выполняет useMemo. Поэтому в компоненте нужно передать checkResult без вызова, а как строку
+
+`<div>{checkNumber}</div>;`
+
+### Реэкспорты
+
+Рэкспорты позволяют сократить пути при импорте функций и компонентов, избавившись от лишнего мусора. Паттерн для реэкспорта экшн-криэйторов, операций и редьюсеров из Redux на примере Todos:
+
+1. Создать **index.js** в папке Redux/Todos
+2. Для экспорта всех именных функций используется такая запись:
+
+```
+export * from './todos-actions'
+export * from "./todos-operations";
+export * from "./todos-selectors";
+```
+
+Теперь во всех компонентах можно доставать данные по имени, не указывая конечного файла, т.к. данные будут браться из [index.js.](./src/Redux/Todos/index.js) Например:
+
+Вместо
+`import { getAllTodos } from "../../../Redux/Todos/todos-selectors";`
+Так
+`import { getAllTodos } from "../../../Redux/Todos/";`
+Вместо
+
+```
+import {
+  deleteTodo,
+  toggleCompleted,
+} from "../../../Redux/Todos/todos-operations";
+```
+
+Так
+
+```
+import {
+  deleteTodo,
+  toggleCompleted,
+} from "../../../Redux/Todos/";
+```
+
+И т.д.
+
+Если же используются дефолтные экспорты, как в [todos-reducer.js](./src/Redux/Todos/todos-reducer.js), их можно собрать в index.js таким образом:
+
+`export { default as todosReducer } from "./todos-reducer";`
+
+А после в store.js заимпортировать с деструктуризацией:
+
+`import { todosReducer } from "./Todos";`
