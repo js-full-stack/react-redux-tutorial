@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { logIn } from "../Redux/authTodos/auth-operations";
+import { logIn } from "../Redux/authTodos/";
 
-import { connect } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 
 const styles = {
   form: {
@@ -28,6 +28,7 @@ const LoginView = ({ onLogin }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
     onLogin({ email, password });
     setEmail("");
     setPassword("");

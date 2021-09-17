@@ -2356,6 +2356,17 @@ export default connect(null, mapDispatchToProps)(RegisterView);
 
 ```
 
+Или через useDispatch:
+
+```
+  const dispatch = useDispatch();
+  const handleSubmit = e = > {
+    dispatch(register({name, email, password}))
+  }
+
+  export default RegisterView
+```
+
 3. Делаем обработку данных в **todosReducer.js**:
 
 ```
@@ -2437,6 +2448,15 @@ const mapDispatchToProps = {
 };
 
 export default connect(null, mapDispatchToProps)(LoginView);
+```
+
+Или через useDispatch:
+
+```
+  const dispatch = useDispatch();
+   const handleSubmit = (e) => {
+     dispatch(logIn({{ email, password }}))
+  };
 ```
 
 3. Делаем обработку данных и ошибок в **todosReducer.js**, здесь буквально то же самое, что и при логине:
@@ -2734,3 +2754,74 @@ const error = createReducer(null, {
 });
 
 ```
+
+### PrivateRoute для приватных маршрутов
+
+Идея авторизации пользователя заключается в предоставлении доступа к маршрутам, которые закрыты от неавторизованных пользователей. Для реализации этой идеи можно использовать компонент (HOC) PrivateRoute, описанный в [документации React Roiter](https://reactrouter.com/web/example/auth-workflow)
+
+```
+function PrivateRoute({ children, ...rest }) {
+
+  // useAuth() - селектор, проверяющий по полю token, авторизирован ли пользователь
+  let auth = useAuth();
+  return (
+    <Route
+      {...rest}
+      render={({ location }) =>
+
+  // если пользователь авторизован, отображаем страницу (children)
+        auth.user ? (
+          children
+        ) : (
+
+  // если пользователь не авторизирован, делаем redirect на страницу с логином или любую другую публичную страницу
+          <Redirect
+            to={{
+              pathname: "/login",
+              state: { from: location }
+            }}
+          />
+        )
+      }
+    />
+  );
+}
+```
+
+В текущем приложении пользователь должен иметь доступ к странице с заметками (/todos) только после авторизации.
+
+После небольшой редакции компонент [PrivateRoute.jsx](./src/components/PrivateRoute.jsx) готов к использованию в нашем приложении:
+
+```
+import { Route, Redirect } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { getIsAuthenticated } from "./Redux/authTodos/auth-selectors";
+
+const PrivateRoute = ({ children, ...rest }) => {
+  const isAuth = useSelector((state) => getIsAuthenticated(state));
+  return (
+    <Route
+      {...rest}
+      render={({ location }) =>
+        isAuth ? (
+          children
+        ) : (
+          <Redirect
+            to={{
+              pathname: "/login",
+              state: { from: location },
+            }}
+          />
+        )
+      }
+    />
+  );
+};
+
+export default PrivateRoute;
+
+```
+
+И теперь достаточно обернуть нужный компонент в PrivateRoute:
+
+![privateRoute](./images/privateRoute.jpg)

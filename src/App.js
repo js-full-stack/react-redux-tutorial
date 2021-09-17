@@ -10,6 +10,7 @@ import RegisterView from "./views/RegisterView";
 import TodosViewRedux from "./views/TodosViewRedux";
 import CounterView from "./views/CounterView";
 import { getCurrentUser } from "./Redux/authTodos/auth-operations";
+import PrivateRoute from "./components/PrivateRoute";
 
 function App({ onGetCurrentUser }) {
   useEffect(() => {
@@ -20,9 +21,12 @@ function App({ onGetCurrentUser }) {
       <AppBar />
       <Switch>
         <Route exact path="/" component={HomeView} />
-        <Route path="/todos" component={TodosViewRedux} />
         <Route path="/login" component={LoginView} />
         <Route path="/register" component={RegisterView} />
+
+        <PrivateRoute path="/todos">
+          <TodosViewRedux />
+        </PrivateRoute>
       </Switch>
     </>
   );
