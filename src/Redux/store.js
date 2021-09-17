@@ -1,6 +1,7 @@
 import counterReducer from "./Counter/counter-reducer";
 import counterSlicesReducer from "./CounterSlices/counter-reducer";
 import { todosReducer } from "./Todos";
+import { authReducer } from "./authTodos/";
 
 import {
   configureStore,
@@ -18,14 +19,14 @@ import {
   REGISTER,
 } from "redux-persist";
 import storage from "redux-persist/lib/storage";
-import logger from "redux-logger";
+// import logger from "redux-logger";
 
-const myCustomMiddlware = (store) => (next) => (action) => {
-  console.log("Срабатывает каждый раз при экшне");
+// const myCustomMiddlware = (store) => (next) => (action) => {
+//   console.log("Срабатывает каждый раз при экшне");
 
-  // return next(action) передает управление дальше
-  return next(action);
-};
+// return next(action) передает управление дальше
+// return next(action);
+// };
 
 const middleware = getDefaultMiddleware({
   serializableCheck: {
@@ -34,14 +35,15 @@ const middleware = getDefaultMiddleware({
 }); /* .concat(myCustomMiddlware, logger) */
 
 const persistConfig = {
-  key: "root",
+  key: "token",
   storage,
-  blacklist: "step",
+  whitelist: "token",
 };
 const rootReducer = combineReducers({
-  counter: persistReducer(persistConfig, counterReducer),
+  counter: counterReducer,
   counterSlices: counterSlicesReducer,
   todos: todosReducer,
+  auth: persistReducer(persistConfig, authReducer),
 });
 
 export const store = configureStore({

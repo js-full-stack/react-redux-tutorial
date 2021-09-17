@@ -17,12 +17,11 @@ import {
 } from "./todos-actions";
 
 const errorHandler = (errorMessage) => toast.error(errorMessage);
-axios.defaults.baseURL = "http://localhost:3000";
 
 export const fetchTodos = () => async (dispatch) => {
   try {
     dispatch(fetchTodosRequest());
-    const { data } = await axios.get("/todos");
+    const { data } = await axios.get("http://localhost:4040/todos");
     dispatch(fetchTodosSuccess(data));
   } catch (error) {
     errorHandler(error.message);
@@ -46,7 +45,7 @@ export const addTodo = (text) => async (dispatch) => {
   try {
     dispatch(addTodoRequest());
 
-    const { data } = await axios.post("/todos", todo);
+    const { data } = await axios.post("http://localhost:4040/todos", todo);
     dispatch(addTodoSuccess(data));
   } catch (error) {
     errorHandler(error.message);
@@ -70,7 +69,7 @@ export const addTodo = (text) => async (dispatch) => {
 export const deleteTodo = (todoId) => async (dispatch) => {
   try {
     dispatch(deleteTodoRequest());
-    await axios.delete(`todos/${todoId}`);
+    await axios.delete(`http://localhost:4040/todos/${todoId}`);
     dispatch(deleteTodoSuccess(todoId));
   } catch (error) {
     errorHandler(error.message);
@@ -92,7 +91,10 @@ export const toggleCompleted = ({ id, completed }) => async (dispatch) => {
   try {
     const update = { completed };
     dispatch(toggleCompletedRequest());
-    const { data } = await axios.patch(`/todos/${id}`, update);
+    const { data } = await axios.patch(
+      `http://localhost:4040/todos/${id}`,
+      update
+    );
     dispatch(toggleCompletedSuccess(data));
   } catch (error) {
     errorHandler(error.message);

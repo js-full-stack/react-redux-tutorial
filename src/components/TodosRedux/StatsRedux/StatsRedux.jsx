@@ -1,7 +1,6 @@
 import { connect, useSelector } from "react-redux";
 import { getAllTodos } from "../../../Redux/Todos/";
 import "./Stats.scss";
-import { useMemo } from "react";
 
 const StatsRedux = ({ allTodos }) => {
   // const allTodos = useSelector((state) => state.todos.items);

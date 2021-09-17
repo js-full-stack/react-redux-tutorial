@@ -1,54 +1,19 @@
 {
   "todos": [
     {
-      "text": "gsag",
+      "id": "id-3",
+      "text": "Привыкнуть к Redux",
+      "completed": true
+    },
+    {
+      "text": "wegqrhewtrjeytrkutyy",
+      "completed": false,
+      "id": "AFzDG-8"
+    },
+    {
+      "text": "qweqwe",
       "completed": true,
-      "id": 12
-    },
-    {
-      "text": "g",
-      "completed": false,
-      "id": 13
-    },
-    {
-      "text": "gsag",
-      "completed": true,
-      "id": 17
-    },
-    {
-      "text": "gsa",
-      "completed": false,
-      "id": 18
-    },
-    {
-      "text": "cs",
-      "completed": false,
-      "id": 21
-    },
-    {
-      "text": "gs",
-      "completed": false,
-      "id": 26
-    },
-    {
-      "text": "bd",
-      "completed": false,
-      "id": 27
-    },
-    {
-      "text": "bds",
-      "completed": false,
-      "id": 28
-    },
-    {
-      "text": "gsg",
-      "completed": false,
-      "id": 29
-    },
-    {
-      "text": "gdw",
-      "completed": false,
-      "id": 30
+      "id": "rgkrUOs"
     }
   ]
 }

@@ -86,7 +86,20 @@
 - [Мемоизация с помощью хука useMemo](#Мемоизация-с-помощью-хука-useMemo)
 - [Реэкспорты](#Реэкспорты)
 
-  Для понимания основ работы redux:
+## [Регистрация и логин](#Регистрация-и-логин)
+
+- [Структура компонентов](#Структура-компонентов)
+- [Добавление структуры данных для авторизации в Redux](#Добавление-данных-для-авторизации-в-Redux)
+- [Прописываем экшны](#Прописываем-экшны)
+- [Регистрация пользователя](#Регистрация-пользователя)
+- [Логинизация пользователя](#Логинизация-пользователя)
+- [Реализация отклика интерфейса при регистрации и логинизации](#Реализация-отклика-интерфейса-при-регистрации-и-логинизации)
+- [Запись токена в заголовок авторизации](#Запись-токена-в-заголовок-авторизации)
+- [Функционал для Logout](#Функционал-для-Logout)
+- [Рефреш залогиненного пользователя](#рефреш-залогиненного-пользователя)
+- [Функция для обработки ошибок (сокращение кода)](#функция-для-обработки-ошибок)
+
+Для понимания основ работы redux:
 
 1. Создать папку redux, а в ней файл `store.js`;
 2. В `store.js`:
@@ -2000,3 +2013,724 @@ import {
 А после в store.js заимпортировать с деструктуризацией:
 
 `import { todosReducer } from "./Todos";`
+
+## Регистрация и логин
+
+Для регистрации будем использовать живой бекенд с такими эндпоинтами:
+
+![back](./images/backend.jpg)
+
+### Структура компонентов
+
+Чтобы реализовать логику для регистрации и логинизации юзера с дальнейшим приватным доступом к коллекции заметок, в первую очередь, потребуется создать ряд новых компонентов. Пока они не содержат логики, лишь отрисовывают интерфейс
+
+В Components => UserMenu:
+
+1. Компонент AuthNav - рендерит ссылки на страницу с регистрацией и логинизацией:
+
+```
+const AuthNav = () => (
+  <div>
+    <NavLink
+      to="/register"
+      exact
+      style={styles.link}
+      activeStyle={styles.activeLink}
+    >
+      Регистрация
+    </NavLink>
+    <NavLink
+      to="/login"
+      exact
+      style={styles.link}
+      activeStyle={styles.activeLink}
+    >
+      Логин
+    </NavLink>
+  </div>
+);
+```
+
+2. Компонент UserMenu - рендерит приветствие и кнопку для логаута:
+
+```
+const UserMenu = () => (
+  <div style={styles.container}>
+    <span style={styles.name}>Welcome, user</span>
+    <button type="button" onClick="">
+      Logout
+    </button>
+  </div>
+);
+```
+
+3. Компонент AppBar - отвечает за рендеринг по условию компонента AuthNav или UserMenu (в зависимтси от того прошел ли юзер логинизацию)
+
+```
+const AppBar = () => {
+  const isAuthenticated = false;
+  return (
+    <header style={styles.header}>
+      <Navigation />
+      {isAuthenticated ? <UserMenu /> : <AuthNav />}
+    </header>
+  );
+};
+```
+
+4. Компонент Navigation - обеспечивает возможность навигации пользователей между страницей с заметками и домашней страницей:
+
+```
+const Navigation = () => (
+  <nav>
+    <NavLink to="/" exact style={styles.link} activeStyle={styles.activeLink}>
+      Главная
+    </NavLink>
+
+    <NavLink
+      to="/todos"
+      exact
+      style={styles.link}
+      activeStyle={styles.activeLink}
+    >
+      Заметки
+    </NavLink>
+  </nav>
+);
+
+```
+
+В папке Views:
+
+1. Страница HomeView
+
+```
+const HomeView = () => (
+  <div style={styles.container}>
+    <h1 style={styles.title}>
+      Приветственная страница нашего сервиса
+      <span role="img" aria-label="Иконка приветствия">
+        💁‍♀️
+      </span>
+    </h1>
+  </div>
+);
+```
+
+2. Страница RegisterView:
+
+```
+const RegisterView = () => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleChangeName = (e) => {
+    setName(e.target.value);
+  };
+  const handleChangeEmail = (e) => {
+    setEmail(e.target.value);
+  };
+  const handleChangePassword = (e) => {
+    setPassword(e.target.value);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    // this.props.onRegister(this.state);
+    setName("");
+    setEmail("");
+    setPassword("");
+  };
+
+  return (
+    <div>
+      <h1>Страница регистрации</h1>
+
+      <form onSubmit={handleSubmit} style={styles.form} autoComplete="off">
+        <label style={styles.label}>
+          Имя
+          <input
+            type="text"
+            name="name"
+            value={name}
+            onChange={handleChangeName}
+          />
+        </label>
+
+        <label style={styles.label}>
+          Почта
+          <input
+            type="email"
+            name="email"
+            value={email}
+            onChange={handleChangeEmail}
+          />
+        </label>
+
+        <label style={styles.label}>
+          Пароль
+          <input
+            type="password"
+            name="password"
+            value={password}
+            onChange={handleChangePassword}
+          />
+        </label>
+
+        <button type="submit">Зарегистрироваться</button>
+      </form>
+    </div>
+  );
+};
+```
+
+3. Страница LoginView:
+
+```
+const LoginView = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleChangeEmail = (e) => {
+    setEmail(e.target.value);
+  };
+
+  const handleChangePassword = (e) => {
+    setPassword(e.target.value);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+  };
+
+  return (
+    <div>
+      <h1>Страница логина</h1>
+
+      <form onSubmit={handleSubmit} style={styles.form} autoComplete="off">
+        <label style={styles.label}>
+          Почта
+          <input
+            type="email"
+            name="email"
+            value={email}
+            onChange={handleChangeEmail}
+          />
+        </label>
+
+        <label style={styles.label}>
+          Пароль
+          <input
+            type="password"
+            name="password"
+            value={password}
+            onChange={handleChangePassword}
+          />
+        </label>
+
+        <button type="submit">Войти</button>
+      </form>
+    </div>
+  );
+};
+
+```
+
+App.js выглядит так:
+
+```
+function App() {
+  return (
+    <>
+      <AppBar />
+      <Switch>
+        <Route exact path="/" component={HomeView} />
+        <Route path="/todos" component={TodosViewRedux} />
+        <Route path="/login" component={LoginView} />
+        <Route path="/register" component={RegisterView} />
+      </Switch>
+    </>
+  );
+}
+```
+
+### Добавление структуры данных для авторизации в Redux
+
+Стейт для авторизации будет формата:
+
+```
+auth: {
+  user,
+  token,
+  error
+}
+```
+
+В папке Redux создадим папку authTodos, а в ней:
+
+- auth-actions.js
+- auth-operations.js
+- auth-reducer.js
+- auth-selectors.js
+
+Для получения, записи и удаления списка задач будем использовать "живой" бекенд [по ссылке](https://connections-api.herokuapp.com/docs/#/). Поэтому локальный бекенд **json-server** можно удалить.
+https://lpj-tasker.herokuapp.com
+
+### Прописываем экшны
+
+Сразу же пропишем экшны:
+
+```
+import { createAction } from "@reduxjs/toolkit";
+
+// Регистрация
+export const registerRequest = createAction("auth/registerRequest");
+export const registerSuccess = createAction("auth/registerSuccess");
+export const registerError = createAction("auth/registerError");
+
+// Логинизация
+export const loginRequest = createAction("auth/loginRequest");
+export const loginSuccess = createAction("auth/loginSuccess");
+export const loginError = createAction("auth/loginError");
+
+// Выход из профиля
+export const logoutRequest = createAction("auth/logoutRequest");
+export const logoutSuccess = createAction("auth/logoutSuccess");
+export const logoutError = createAction("auth/logoutError");
+
+// Получение данных текущего пользователя
+export const getCurrentUserRequest = createAction("auth/getCurrentUserRequest");
+export const getCurrentUserSuccess = createAction("auth/getCurrentUserSuccess");
+export const getCurrentUserError = createAction("auth/getCurrentUserError");
+```
+
+### Регистрация пользователя
+
+1. Пишем операцию в auth-operations.js:
+
+```
+import axios from "axios";
+
+import {
+  registerRequest,
+  registerSuccess,
+  registerError,
+} from "./auth-actions";
+
+
+export const register = (credential) => async (dispatch) => {
+  dispatch(registerRequest());
+  try {
+    const response = await axios.post("/users/signup", credential);
+    dispatch(registerSuccess(response.data));
+  } catch (error) {
+    dispatch(registerError(error.message));
+  }
+};
+
+```
+
+2. Подключаем форму в [RegisterView](./src/views/RegisterView.jsx) к Redux:
+
+```
+import { connect } from "react-redux";
+import { register } from "../Redux/authTodos/auth-operations";
+
+//Функция для сабмита
+  const handleSubmit = (e) => {
+    onRegister({ name, email, password });
+
+// Подключение через connect
+const mapDispatchToProps = (dispatch) => ({
+  onRegister: (data) => dispatch(register(data)),
+});
+
+// Сокращенная запись
+const mapDispatchToProps = {
+  onRegister: register,
+};
+
+export default connect(null, mapDispatchToProps)(RegisterView);
+
+```
+
+3. Делаем обработку данных в **todosReducer.js**:
+
+```
+import {
+   registerSuccess,
+} from "./auth-actions";
+
+const initialUserState = { name: null, email: null };
+
+const user = createReducer(initialUserState, {
+  [registerSuccess]: (_, {payload}) => payload.user,
+});
+const token = createReducer(null, {
+  [registerSuccess]: (_, {payload}) => payload.token,
+});
+
+```
+
+payload.user и payload.token - это данные, которые приходят в результате запроса на бекенд
+[!payload](./images/data.jpg)
+
+Теперь они проходят через редьюсер и записываются в стейт
+
+![!state](./images/exxxx.jpg)
+
+Сразу же пропишем логику для обработки ошибок при регистрации, вернув error.message - сообщение, которое выдает сервер при возникновении ошибки:
+
+```
+const error = createReducer(null, {
+  [registerError]: (_, error) => error.message,
+});
+```
+
+### Логинизация пользователя
+
+Логинизация пользователя делается похожим образом:
+
+1. Пишем операцию в auth-operations.js:
+
+```
+import axios from "axios";
+
+import {
+  loginRequest,
+  loginSuccess,
+  loginError,
+} from "./auth-actions";
+
+
+export const register = (credential) => async (dispatch) => {
+  dispatch(registerRequest());
+  try {
+    const response = await axios.post("/users/signup", credential);
+    dispatch(registerSuccess(response.data));
+  } catch (error) {
+    dispatch(registerError(error.message));
+  }
+};
+
+```
+
+2. Подключаем форму в [LoginView](./src/views/LoginView.jsx) к Redux:
+
+```
+import { logIn } from "../Redux/authTodos/auth-operations";
+import { connect } from "react-redux";
+
+  const handleSubmit = (e) => {
+    onLogin({ email, password });
+  };
+  // Стандартная запись
+// const mapDispatchToProps = (dispatch) => ({
+//   onLogin: (data) => dispatch(logIn(data)),
+// });
+
+// Короткая запись
+const mapDispatchToProps = {
+  onLogin: logIn,
+};
+
+export default connect(null, mapDispatchToProps)(LoginView);
+```
+
+3. Делаем обработку данных и ошибок в **todosReducer.js**, здесь буквально то же самое, что и при логине:
+
+```
+const user = createReducer(initialUserState, {
+  [registerSuccess]: (_, { payload }) => payload.user,
+  [loginSuccess]: (_, { payload }) => payload.user
+});
+
+const token = createReducer(null, {
+  [registerSuccess]: (_, { payload }) => payload.token,
+  [loginSuccess]: (_, { payload }) => payload.token,
+});
+
+const error = createReducer(null, {
+  [registerError]: (_, error) => error.message,
+  [loginError]: (_, error) => error.message,
+});
+
+```
+
+### Реализация отклика интерфейса при регистрации и логинизации
+
+В зависимости от значения пропа isAuthenticated в компоненте **AppBar** отображается компонент AuthNav с кнопками для регистрации и логинизации либо UserMenu с приветствием пользователя и кнопкой logout для выхода из аккаунта.
+
+При авторизации в payload приходит token. По умолчанию он равен null, т.е. false. Следовательно, его и нужно использовать, чтобы определить, авторизован ли пользователь и в зависимости от этого рендерить тот или иной компонент.
+
+![auth]('./../images/isAuth.jpg)
+
+То есть, все что нужно сделать - получить кусок стейта с полем для токена в AppBar и сделать проверку, но предварительно напишем селектор для этого в **auth-selectors.js**:
+
+`export const getIsAuthenticated = (state) => state.auth.token;`
+
+```
+import { getIsAuthenticated } from "../../Redux/authTodos/auth-selectors";
+
+const AppBar = ({ isAuthenticated }) => (
+  <header style={styles.header}>
+    <Navigation />
+    {isAuthenticated ? <UserMenu /> : <AuthNav />}
+  </header>
+);
+
+const mapStateToProps = (state) => ({
+  isAuthenticated: getIsAuthenticated(state),
+});
+
+export default connect(mapStateToProps)(AppBar);
+
+```
+
+Также можно получить поле с токеном через useSelector:
+
+```
+const AppBar = () => {
+  const isAuthenticated = useSelector((state) => getIsAuthenticated(state));
+  return (
+    <header style={styles.header}>
+      <Navigation />
+      {isAuthenticated ? <UserMenu /> : <AuthNav />}
+    </header>
+  );
+};
+
+export default AppBar;
+
+```
+
+При регистрации в компоненте **UserMenu** отображается приветствие _Welcome, user_. Для персонализации подставим вместо _user_ имя пользователя.
+
+Селектор:
+export const getUserName = (state) => state.auth.user.name;
+
+Теперь в **UserMenu** получаем этот селектор, "стучимся" к стейту через useSelector или mapStateToProps и записываем имя пользователя в шаблон:
+
+`const userName = useSelector((state) => getUserName(state));`
+.......
+`<span style={styles.name}>Welcome, {userName}</span>`
+
+### Запись токена в заголовок авторизации
+
+Компонент **UserMenu** рендерит кнопку Logout, при нажатии на которую пользователь должен выходить из аккаунта. Сам по себе Logout - это приватная операция, то есть такая, которая не доступна каждому посетителю сайта, а лишь авторизированному. Чтобы бекенд смог идентифицировать пользователя, которые имеет право выполнить приватную операцию, вместе с запросом на бекенд необходимо передавать заголовок авторизации с токеном. .
+
+```
+// Установить заголовок авторизации через axios можно так:
+axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+
+// А чтобы обнулить его, достаточно перезаписать на пустую строку:
+    axios.defaults.headers.common.Authorization = "";
+
+// Создадим объект токена с методома set и unset для удобного доступа к этим операциям:
+const token = {
+  set(token) {
+    axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+  },
+  unset() {
+    axios.defaults.headers.common.Authorization = "";
+  },
+};
+
+```
+
+Теперь достаточно в операции логина и регистрации передать token.set(token). Пример с частью кода из метода register:
+
+```
+export const register = (credential) => async (dispatch) => {
+
+  try {
+    const response = await axios.post("/users/signup", credential);
+    token.set(response.data.token);
+
+    dispatch(registerSuccess(response.data));
+}};
+```
+
+Для логина делается точно так же.
+
+### Функционал для Logout
+
+Реализуем в auth-operations.js функционал для логаута:
+
+```
+export const logOut = () => async (dispatch) => {
+  dispatch(logoutRequest());
+
+  try {
+
+    // добавлять заголовок авторизации в запрос не нужно, т.к. он уже установлен при login/register
+    await axios.post("/users/logout");
+
+    dispatch(logoutSuccess());
+
+    // если логаут выполнелся успешно - снимаем заголовок авторизации
+    token.unset();
+  } catch (error) {
+    dispatch.logoutError(error.message);
+  }
+};
+```
+
+Передаем эту операцию в UserMenu диспатчим и вызываем при клике на кнопку:
+
+```
+import { logOut } from "../../Redux/authTodos/auth-operations";
+
+onst UserMenu = ({ userName, onLogout }) => {
+
+  return (
+    <div style={styles.container}>
+      <span style={styles.name}>Welcome, {userName}</span>
+      <button type="button" onClick={onLogout}>
+        Logout
+      </button>
+    </div>
+  );
+};
+
+const mapDispatchToProps = {
+  onLogout: logOut,
+};
+
+```
+
+Теперь при клике на logout в network приходит заголовок авторизации вместе с токеном:
+![log](./images/logout.jpg)
+
+Пока логаут выполняется только на сервере. Чтобы сделать его на клиенте, нужно сделать обработку в auth-reducer.js:
+
+```
+const initialUserState = { name: null, email: null };
+
+// В редьюсере user достаточно сбросить данные в начальное состояние
+const user = createReducer(initialUserState, {
+  // ...
+  [logoutSuccess]: () => initialUserState,
+});
+
+// И также сбросить в ноль значение токена в редьюсере token:
+
+const token = createReducer(null, {
+  //...
+  [logoutSuccess]: () => null,
+});
+
+// И не забыть дописать обработчик ошибок
+
+const error = createReducer(null, {
+  // ...
+  [logoutError]: (_, error) => error.message,
+});
+
+```
+
+### Рефреш залогиненного пользователя
+
+Сейчас работает регистрация, логинизация и логаут. Но у приложения есть проблема: после обновления страницы пользователь автоматически разлогинивается, так как он "слетает". Поэтому токен надо где-то хранить на клиенте, чтобы его можно было мгновенно взять после перезагрузки страницы и сразу же подгрузить актуальные данные. Для этого можно использовать локальное хранилище и persistore для authReducer.
+
+Общие принципы работы с персистором [описаны выше](#PersistStore) и он уже есть в проекте. Сейчас его нужно заново подключить в корневом [index.js](./src/index.js), а в [store.js](./src/Redux/store.js) прописать persistConfig, который будет сохранять токен в localStorage, а после добавить **persistReducer** для **authReducer** c этим кофигом:
+
+```
+const persistConfig = {
+  key: "token",
+  storage,
+  whitelist: "token",
+};
+
+const rootReducer = combineReducers({
+  ...
+  auth: persistReducer(persistConfig, authReducer),
+});
+```
+
+Теперь после перезагрузки страницы логаут не происходит, но и данные о пользователе не подтягиваются с бекенда, из за чего приложение ломается. Так, после обновления страницы уже не отображаются данные пользователя, так как они не приходят с бекенда:
+
+![refresh](./images/refresh.jpg)
+
+Чтобы решить эту проблему, можно получать токен из localStorage каждый раз при загрузке приложения и отправлять его на бекенд для авторизации. Для этого у нас есть [эндпоинт /users​/current](#регистрация-и-логин), на который нужно отправить get-запрос для получения токена, выданного текущему юзеру, а по нему и самих данных юзера. И поскольку это приватные данные, то вместе с запросом необходимо передать заголовок авторизации.
+
+Функция, которая делает диспатч, вторым аргументом принимает функцию getState(), которая возвращает весь стейт Редакса. Это тот редкий случай, когда данная возможность пригодится
+
+1. Пропишем операцию:
+
+```
+export const getCurrentUser = () => async (dispatch, getState) => {
+  // деструктуризуем поле токена из стейта
+  const {
+    auth: { token: persistedToken },
+  } = getState();
+
+  // если токена нет - просто выходим из операции
+  if (!persistedToken) {
+    return;
+  }
+  // если токен есть - дообавляем его в заголовок авторизации
+  token.set(persistedToken);
+
+  dispatch(getCurrentUserRequest());
+  try {
+    const response = await axios.get("/users/current");
+    dispatch(getCurrentUserSuccess(response.data));
+  } catch (error) {
+    dispatch(getCurrentUserError(error.message));
+  }
+};
+
+```
+
+2. Получать данные нужно при первом рендеринге, поэтому вызовем операцию в App в теле useEffect():
+
+![app](./images/appOperation.jpg)
+
+3. Обработаем операцию в _auth-reducer_ и получим данные юзера, которые хранятся в payload:
+
+```
+const user = createReducer(initialUserState, {
+  ...
+  [getCurrentUserSuccess]: (_, { payload }) => payload,
+});
+```
+
+И по стандарту обработаем ошибку:
+
+```
+  ...
+  [getCurrentUserError]: (_, error) => error.message,
+```
+
+Теперь при обновлении страницы подтягиваются данные об авторизованном пользователе, задача решена.
+
+### Функция для обработки ошибок
+
+Поскольку ошибки обрабатываются одинаково, получается много повторяющегося кода:
+
+```
+const error = createReducer(null, {
+  [registerError]: (_, error) => error.message,
+  [loginError]: (_, error) => error.message,
+  [logoutError]: (_, error) => error.message,
+  [getCurrentUserError]: (_, error) => error.message,
+});
+
+```
+
+Можно написать простую функцию и абстрагировать это:
+
+```
+const setError = (_, error) => error.message
+
+const error = createReducer(null, {
+  [registerError]: (_, error) => setError,
+  [loginError]: (_, error) => setError,
+  [logoutError]: (_, error) => setError,
+  [getCurrentUserError]: (_, error) => setError,
+});
+
+```

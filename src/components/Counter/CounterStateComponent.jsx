@@ -1,4 +1,4 @@
-import React, { Component, useState, useMemo } from "react";
+import React, {  useState } from "react";
 import Controls from "./Controls";
 import Value from "./Value";
 import CheckForNumber from "./CheckForNumber";
