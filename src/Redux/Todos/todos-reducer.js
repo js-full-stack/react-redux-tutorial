@@ -16,8 +16,10 @@ import {
   changeFilter,
 } from "./todos-actions";
 
+import { fetchTodos } from "./todos-operations";
+
 const items = createReducer([], {
-  "fetchTodos/fulfilled": (_, { payload }) => payload,
+  [fetchTodos.fulfilled]: (_, { payload }) => payload,
   [addTodoSuccess]: (state, { payload }) => [...state, payload],
 
   [deleteTodoSuccess]: (state, { payload }) =>
@@ -32,9 +34,9 @@ const filter = createReducer("", {
 });
 
 const loading = createReducer(false, {
-  "fetchTodos/pending": () => true,
-  "fetchTodos/fulfilled": () => false,
-  "fetchTodos/rejected": () => false,
+  [fetchTodos.pending]: () => true,
+  [fetchTodos.fulfilled]: () => false,
+  [fetchTodos.rejected]: () => false,
   [addTodoRequest]: () => true,
   [addTodoSuccess]: () => false,
   [addTodoError]: () => false,
@@ -47,7 +49,7 @@ const loading = createReducer(false, {
 });
 
 const error = createReducer(null, {
-  "fetchTodos/rejected": (_, { payload }) => payload,
+  [fetchTodos.rejected]: (_, { payload }) => payload,
   [addTodoError]: (_, { payload }) => payload,
   [deleteTodoError]: (_, { payload }) => payload,
   [toggleCompletedError]: (_, { payload }) => payload,

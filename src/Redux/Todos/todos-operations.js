@@ -19,21 +19,21 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 
 const errorHandler = (errorMessage) => toast.error(errorMessage);
 
-export const fetchTodos = () => async (dispatch) => {
-  try {
-    dispatch(fetchTodosRequest());
-    const { data } = await axios.get("http://localhost:4040/todos");
-    dispatch(fetchTodosSuccess(data));
-  } catch (error) {
-    errorHandler(error.message);
-    fetchTodosError(error.message);
-  }
-};
-
-export const fetchTodosAsync = createAsyncThunk("fetchTodos", async () => {
+export const fetchTodos = createAsyncThunk("fetchTodos", async () => {
   const { data } = await axios.get("http://localhost:4040/todos");
   return data;
 });
+
+// export const fetchTodos = () => async (dispatch) => {
+//   try {
+//     dispatch(fetchTodosRequest());
+//     const { data } = await axios.get("http://localhost:4040/todos");
+//     dispatch(fetchTodosSuccess(data));
+//   } catch (error) {
+//     errorHandler(error.message);
+//     fetchTodosError(error.message);
+//   }
+// };
 
 // export const fetchTodos = () => (dispatch) => {
 //   dispatch(fetchTodosRequest());

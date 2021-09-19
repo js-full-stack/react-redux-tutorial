@@ -1684,6 +1684,10 @@ CreateAsyncThunk принимает первым аргументом базов
 
 ![example](./images/asyncThunk.jpg)
 
+Или так:
+
+![ex](./images/async2.jpg)
+
 #### Пример с хуком useDispatch вместо mapDispatchToProps
 
 Вместо использования mapDispatchToProps можно использовать хук `useDispatch()` из библиотеки `react-redux`. Пример с fetchTodos:
