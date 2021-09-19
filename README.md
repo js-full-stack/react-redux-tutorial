@@ -75,10 +75,11 @@
   2. [Удаление Todo](#Удаление-Todo)
   3. [Toggle Todo](#Toggle-Todo)
   4. [Fetch Todos](#fetch-todos)
-  5. [Пример с хуком useDispatch вместо mapDispatchToProps](#Пример-с-хуком-useDispatch-вместо-mapDispatchToProps)
-  6. [Пример с useSelector вместо mapStateToProps](#Пример-с-useSelector-вместо-mapStateToProps)
-  7. [Редьюсер loadind](#Редьюсер-loadind)
-  8. [Добавление спиннера](#Добавление-спиннера)
+  5. [CreateAsyncThunk](#CreateAsyncThunk)
+  6. [Пример с хуком useDispatch вместо mapDispatchToProps](#Пример-с-хуком-useDispatch-вместо-mapDispatchToProps)
+  7. [Пример с useSelector вместо mapStateToProps](#Пример-с-useSelector-вместо-mapStateToProps)
+  8. [Редьюсер loadind](#Редьюсер-loadind)
+  9. [Добавление спиннера](#Добавление-спиннера)
 
 ## [Селекторы и библиотека reselect](#Селекторы-и-библиотека-reselect)
 
@@ -98,6 +99,10 @@
 - [Функционал для Logout](#Функционал-для-Logout)
 - [Рефреш залогиненного пользователя](#рефреш-залогиненного-пользователя)
 - [Функция для обработки ошибок (сокращение кода)](#функция-для-обработки-ошибок)
+- [PrivateRoute для приватных маршрутов](#PrivateRoute-для-приватных-маршрутов)
+- [Скрытие страницы с заметками из навигации](#Скрытие-страницы-с-заметками-из-навигации)
+- [Скрытие маршрутов login и register после авторизации (PrivateRoute)](#Скрытие-маршрутов-login-и-register-после-авторизации)
+- [Настройка последовательности рендеринга todos и current (данные о текущем пользователе)](#Настройка-последовательности-рендеринга-todos-и-current)
 
 Для понимания основ работы redux:
 
@@ -1640,6 +1645,45 @@ useEffect(() => {
   }, []);
 ```
 
+### CreateAsyncThunk
+
+CreateAsyncThunk - это абстракция, которая позволяет значительно сократить код при работе с асинхронными запросами в Redux. Для примера перепишем операцию [Fetch todos](#Fetch-todos). Экшн криейторы при использовании данной функции не нужны, достаточно переписать операцию:
+
+Было:
+
+```
+export const fetchTodos = () => async (dispatch) => {
+  try {
+    dispatch(fetchTodosRequest());
+    const { data } = await axios.get("http://localhost:4040/todos");
+    dispatch(fetchTodosSuccess(data));
+  } catch (error) {
+    errorHandler(error.message);
+    fetchTodosError(error.message);
+  }
+};
+```
+
+Стало:
+
+```
+export const fetchTodos = createAsyncThunk("fetchTodos", async () => {
+  const { data } = await axios.get("http://localhost:4040/todos");
+  return data;
+});
+
+```
+
+CreateAsyncThunk принимает первым аргументом базовое имя экшна (fetchTodos), добавляя 3 экшна через слэш. В данном случае это:
+
+- fetchTodos/pending - ожидает выполнения
+- fetchTodos/fulfilled - выполнено успешно
+- fetchTodos/rejected - выполнено с ошибкой
+
+Теперь, чтобы приложение работало, достаточно заменить в todos-reducer экшны на соответствующие имена:
+
+![example](./images/asyncThunk.jpg)
+
 #### Пример с хуком useDispatch вместо mapDispatchToProps
 
 Вместо использования mapDispatchToProps можно использовать хук `useDispatch()` из библиотеки `react-redux`. Пример с fetchTodos:
@@ -2747,10 +2791,10 @@ const error = createReducer(null, {
 const setError = (_, error) => error.message
 
 const error = createReducer(null, {
-  [registerError]: (_, error) => setError,
-  [loginError]: (_, error) => setError,
-  [logoutError]: (_, error) => setError,
-  [getCurrentUserError]: (_, error) => setError,
+  [registerError]: setError,
+  [loginError]: setError,
+  [logoutError]: setError,
+  [getCurrentUserError]: setError,
 });
 
 ```
@@ -2825,3 +2869,133 @@ export default PrivateRoute;
 И теперь достаточно обернуть нужный компонент в PrivateRoute:
 
 ![privateRoute](./images/privateRoute.jpg)
+
+Также можно немного видоизменить логику в PrivateRoute, чтобы можно было рендерить приватную страницу не только как компонент, но и как проп:
+
+```
+
+const PrivateRoute = ({ ...rest }) => {
+  const isAuth = useSelector((state) => getIsAuthenticated(state));
+  return isAuth ? <Route {...rest} /> : <Redirect to="/login" />;
+};
+
+```
+
+App.js:
+
+```
+        // и так работает
+        <PrivateRoute path="/todos">
+          <TodosViewRedux />
+        </PrivateRoute> */}
+
+        // и так тоже
+        <PrivateRoute path="/todos" component={TodosViewRedux} />
+```
+
+### Скрытие страницы с заметками из навигации
+
+Неавторизованный пользователь видит в интерфейсе страницу с заметками, а она должна отображаться только после авторизации. Чтобы это решить, нужно добавить в [Navigation.jsx](./src/components/UserMenu/Navigation.jsx) рендеринг по условию:
+
+```
+  const isAuth = useSelector((state) => getIsAuthenticated(state));
+
+     {isAuth && (
+        <NavLink
+          to="/todos"
+          exact
+          style={styles.link}
+          activeStyle={styles.activeLink}
+        >
+          Заметки
+        </NavLink>
+      )}
+
+```
+
+### Скрытие маршрутов login и register после авторизации
+
+После регистрации и логинизации пользователя вручную можно перейти на страницу регистрации или логина, что нелогично, поэтому нужно скрыть эти маршруты для авторизованных пользователей. Для этого достаточно сделать редирект на приватный маршрут (**/todos**) или на неограниченный (т.е. доступный и авторизованным, и неавторизованным пользователям) маршрут (**/**).
+
+Для этого используем компонент [PublicRoute](./src/components/PublicRoute.jsx):
+
+```
+
+const PublicRoute = ({
+  component: Component,
+  ...routeProps
+}) => {
+  const isAuth = useSelector((state) => getIsAuthenticated(state));
+
+  return (
+    <Route
+      {...routeProps}
+      render={(props) =>
+        isAuth && routeProps.restricted ? (
+          <Redirect to="/todos" />
+        ) : (
+          <Component {...props} />
+        )
+      }
+    />
+  );
+};
+
+export default PublicRoute;
+
+```
+
+А в [App.js](./src/App.js) используем его вместо обычного Route для нужных маршрутов:
+
+```
+      <PublicRoute path="/login" component={LoginView} />
+      <PublicRoute path="/register" component={RegisterView} />
+```
+
+### Настройка последовательности рендеринга todos и current
+
+При обновлении страницы запрос на /todos уходит раньше, чем на получение данных текущего пользователя по токену на маршрут /current. Но так как заметки доступны только после авторизации, запрос за ними должен идти после. И получение заметок, и получение токена происходит в useEffect при первом рендере. Заметки рендерятся в компоненте [TodosViewRedux](./src/views/TodosViewRedux.jsx), а запрос за данными текущего пользователя выполняется в App.js, где рендерится **TodosViewRedux**.
+
+_Проблема в том, что рендеринг в ComponentDidMount или useEffect у вложенного компонента происходит раньше, чем в родительском, т.к. сначала вызывается метод `render`, а в нем происходит отрисовка и вызов методов во вложенных компонентах. Поэтому запрос на заметки уходит раньше, чем запрос на данные пользователя по токену._
+
+![ex](./images/current.jpg)
+
+Для правильной последовательности запросов расширим стейт auth, добавив редьюсер isAuthenticated, которое изначальное будет false и меняться на true при регистрации, логинизации и получения данных о текущем пользователей, а также переходить в false при логауте и при возникновении ошибок:
+
+```
+
+
+const isAuthenticated = createReducer(false, {
+  [registerSuccess]: () => true,
+  [loginSuccess]: () => true,
+  [getCurrentUserSuccess]: () => true,
+  [logoutSuccess]: () => true,
+  [registerError]: () => false,
+  [loginError]: () => false,
+  [logoutError]: () => false,
+  [getCurrentUserError]: () => false,
+});
+
+
+export default combineReducers({
+  user,
+  token,
+  error,
+  isAuthenticated,
+});
+
+```
+
+Теперь достаточно поменять селектор в [auth-selectors.js](./src/Redux/authTodos/auth-selectors.js).
+
+```
+// Вместо аутентификации по токену:
+export const getIsAuthenticated = (state) => state.auth.token;
+
+// Использовать аутентификацию по полю isAuthenticated:
+export const getIsAuthenticated = (state) => state.auth.isAuthenticated;
+```
+
+И теперь запрос на получение текущего пользователя при обновлении страницы идет перед запросом на получение заметок.
+
+![ex](./images/currentTOdos.jpg)

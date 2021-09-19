@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { logIn } from "../Redux/authTodos/";
 
-import { connect, useDispatch } from "react-redux";
+import { connect } from "react-redux";
 
 const styles = {
   form: {

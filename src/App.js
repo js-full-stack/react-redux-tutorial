@@ -1,33 +1,36 @@
-import { Switch, Route, Link } from "react-router-dom";
-import { useEffect } from "react";
+import { Switch, Route } from "react-router-dom";
+import { useEffect, Suspense, lazy } from "react";
 import { connect } from "react-redux";
 
 // import TodosView from "./views/TodosView";
 import AppBar from "./components/UserMenu/AppBar";
-import HomeView from "./views/HomeView";
-import LoginView from "./views/LoginView";
-import RegisterView from "./views/RegisterView";
-import TodosViewRedux from "./views/TodosViewRedux";
+// import HomeView from "./views/HomeView";
 import CounterView from "./views/CounterView";
 import { getCurrentUser } from "./Redux/authTodos/auth-operations";
 import PrivateRoute from "./components/PrivateRoute";
+import PublicRoute from "./components/PublicRoute";
+
+const HomeView = lazy(() => import("./views/HomeView"));
+const LoginView = lazy(() => import("./views/LoginView"));
+const RegisterView = lazy(() => import("./views/RegisterView"));
+const TodosViewRedux = lazy(() => import("./views/TodosViewRedux"));
 
 function App({ onGetCurrentUser }) {
   useEffect(() => {
     onGetCurrentUser();
   }, []);
+
   return (
     <>
-      <AppBar />
-      <Switch>
-        <Route exact path="/" component={HomeView} />
-        <Route path="/login" component={LoginView} />
-        <Route path="/register" component={RegisterView} />
-
-        <PrivateRoute path="/todos">
-          <TodosViewRedux />
-        </PrivateRoute>
-      </Switch>
+      <Suspense fallback={<p>Loading...</p>}>
+        <AppBar />
+        <Switch>
+          <Route exact path="/" component={HomeView} />
+          <PublicRoute path="/login" restricted component={LoginView} />
+          <PublicRoute path="/register" restricted component={RegisterView} />
+          <PrivateRoute path="/todos" component={TodosViewRedux} />
+        </Switch>
+      </Suspense>
     </>
   );
 }

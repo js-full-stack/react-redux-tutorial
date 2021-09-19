@@ -15,6 +15,7 @@ import {
   toggleCompletedSuccess,
   toggleCompletedError,
 } from "./todos-actions";
+import { createAsyncThunk } from "@reduxjs/toolkit";
 
 const errorHandler = (errorMessage) => toast.error(errorMessage);
 
@@ -28,6 +29,11 @@ export const fetchTodos = () => async (dispatch) => {
     fetchTodosError(error.message);
   }
 };
+
+export const fetchTodosAsync = createAsyncThunk("fetchTodos", async () => {
+  const { data } = await axios.get("http://localhost:4040/todos");
+  return data;
+});
 
 // export const fetchTodos = () => (dispatch) => {
 //   dispatch(fetchTodosRequest());

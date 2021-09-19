@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { connect, useDispatch } from "react-redux";
-import { fetchTodos } from "../Redux/Todos/todos-operations";
+import { fetchTodos, fetchTodosAsync } from "../Redux/Todos/todos-operations";
 import { getLoading } from "../Redux/Todos/todos-selectors";
 
 import TodoFilterRedux from "../components/TodosRedux/TodoFilterRedux";
@@ -14,7 +14,8 @@ const TodosViewRedux = ({ isLoading }) => {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    dispatch(fetchTodos());
+    // dispatch(fetchTodos());
+    dispatch(fetchTodosAsync());
   }, []);
 
   return (

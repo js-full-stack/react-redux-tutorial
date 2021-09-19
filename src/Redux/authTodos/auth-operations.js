@@ -13,6 +13,7 @@ import {
   getCurrentUserSuccess,
   getCurrentUserError,
 } from "./auth-actions";
+import { createAsyncThunk } from "@reduxjs/toolkit";
 
 axios.defaults.baseURL = "https://connections-api.herokuapp.com";
 
