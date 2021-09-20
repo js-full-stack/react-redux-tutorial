@@ -3003,3 +3003,5 @@ export const getIsAuthenticated = (state) => state.auth.isAuthenticated;
 И теперь запрос на получение текущего пользователя при обновлении страницы идет перед запросом на получение заметок.
 
 ![ex](./images/currentTOdos.jpg)
+
+Также можно решить эту проблему, добавив в auth-reducer редьюсер лоадера со стартовым значением true, а в App.js получить значение лоадера через useSelector и рендерить разметку только тогда, когда loading = false.
