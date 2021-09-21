@@ -66,6 +66,8 @@
   - [Filter](#Filter)
   - [Перевод Todos на Toolkit](#Перевод-Todos-на-Toolkit)
 
+---
+
 ## [Асинхронный Redux](#Асинхронный-Redux)
 
 - [Кастомные миддлвары](#Кастомные-миддлвары)
@@ -81,11 +83,15 @@
   8. [Редьюсер loadind](#Редьюсер-loadind)
   9. [Добавление спиннера](#Добавление-спиннера)
 
+---
+
 ## [Селекторы и библиотека reselect](#Селекторы-и-библиотека-reselect)
 
 - [Мемоизация селекторов](#Мемоизация-селекторов)
 - [Мемоизация с помощью хука useMemo](#Мемоизация-с-помощью-хука-useMemo)
 - [Реэкспорты](#Реэкспорты)
+
+---
 
 ## [Регистрация и логин](#Регистрация-и-логин)
 
@@ -103,6 +109,12 @@
 - [Скрытие страницы с заметками из навигации](#Скрытие-страницы-с-заметками-из-навигации)
 - [Скрытие маршрутов login и register после авторизации (PrivateRoute)](#Скрытие-маршрутов-login-и-register-после-авторизации)
 - [Настройка последовательности рендеринга todos и current (данные о текущем пользователе)](#Настройка-последовательности-рендеринга-todos-и-current)
+
+---
+
+### Hook useReducer
+
+- [Как использовать](#useReducer)
 
 Для понимания основ работы redux:
 
@@ -3005,3 +3017,106 @@ export const getIsAuthenticated = (state) => state.auth.isAuthenticated;
 ![ex](./images/currentTOdos.jpg)
 
 Также можно решить эту проблему, добавив в auth-reducer редьюсер лоадера со стартовым значением true, а в App.js получить значение лоадера через useSelector и рендерить разметку только тогда, когда loading = false.
+
+### useReducer
+
+Есть простой компонент [Todos.jsx](./src/components/ReactUseReducer/TodosBasic.jsx), который рендерит, фильтрует и удаляет список задач. У него есть 3 локальных стейта:
+
+```
+  const [text, setText] = useState(""); // контролируемый input для добовлении todo
+  const [filterTodos, setfilterTodos] = useState("") // контролируемый input для фильтрации todo
+  const [todoList, setTodoList] = useState([]); // массив всех todo
+```
+
+Чтобы не создавать локальные стейты и не заморачиваться с хранилищем Редакса, хранить все состояния можно в редьюсере, который создается с помощью хука useReducer. Концепция useReducer работает схожим образом с Редаксом: он ожидает экшн с определенным типом и на основе этого делает диспатч и обновляет стейт.
+
+Ранее работа с todos происходила так:
+
+```
+  import { useState } from "react";
+
+  const [todoList, setTodoList] = useState([]);
+
+  // Добавление
+  const addTodo = (e) => {
+    const id = Date.now();
+    const completed = false;
+    const newTodo = { text, id, completed };
+    setTodoList((prev) => [...prev, newTodo]);
+
+   // Удаление
+      const removeTodo = (todoId) => {
+    const newTodoList = todoList.filter(({ id }) => id !== todoId);
+    setTodoList(newTodoList);
+  };
+
+    //Тоггл
+  const toggleCompleted = (todoId) => {
+    const toggleCompletedTodo = todoList.map((todo) =>
+      todo.id === todoId ? { ...todo, completed: !todo.completed } : todo
+    );
+    setTodoList(toggleCompletedTodo);
+  };
+
+
+```
+
+Теперь [переработанный компонент](./src/components/ReactUseReducer/TodosReducer.jsx) переносится в редьюсер:
+
+```
+  import { useReducer } from "react";
+
+// Заменяет три локальных стейта
+  const [todoList, dispatch] = useReducer(todosReducer, []);
+
+// Это можно вынести в др.файл и заимпортировать
+const todosReducer = (state, action) => {
+  switch (action.type) {
+    // Добавление
+    case "addTodo":
+      return [...state, action.payload.newTodo];
+
+    // Удаление
+    case "removeTodo":
+      return state.filter((todo) => todo.id !== action.payload.todoId);
+
+    // Тоггл
+    case "toggleCompleted":
+      return state.map((todo) =>
+        todo.id === action.payload.todoId
+          ? { ...todo, completed: !todo.completed }
+          : todo
+      );
+
+    default:
+      return state;
+  }
+};
+
+```
+
+Сами функции addTodo, removeTodo и ToggleCompleted теперь только диспатчат экшны по указанному в switch/case payload:
+
+```
+const addTodo = (e) => {
+    e.preventDefault();
+    if (!text) return;
+    const id = Date.now();
+    const completed = false;
+
+    const newTodo = { text, id, completed };
+    dispatch({ type: "addTodo", payload: { newTodo } });
+    setText("");
+  };
+
+  const removeTodo = (todoId) => {
+    dispatch({ type: "removeTodo", payload: { todoId } });
+  };
+
+  const toggleCompleted = (todoId) => {
+    dispatch({ type: "toggleCompleted", payload: { todoId } });
+  };
+```
+
+Сам редьюсер можно вынести в отдельный файл и заимпортировать:
+![useReducer](./images/useReducer.jpg)
