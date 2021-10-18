@@ -112,9 +112,13 @@
 
 ---
 
-### Hook useReducer
+### Hooks
 
-- [Как использовать](#useReducer)
+- [UseReducer](#useReducer)
+- [UseMemo](#useMemo)
+- [memo](#memo)
+- [UseRef](#useRef)
+- [Хуки React Router Dom](#хуки-react-router-dom)
 
 Для понимания основ работы redux:
 
@@ -3018,13 +3022,17 @@ export const getIsAuthenticated = (state) => state.auth.isAuthenticated;
 
 Также можно решить эту проблему, добавив в auth-reducer редьюсер лоадера со стартовым значением true, а в App.js получить значение лоадера через useSelector и рендерить разметку только тогда, когда loading = false.
 
+---
+
+## Hooks
+
 ### useReducer
 
 Есть простой компонент [Todos.jsx](./src/components/ReactUseReducer/TodosBasic.jsx), который рендерит, фильтрует и удаляет список задач. У него есть 3 локальных стейта:
 
 ```
-  const [text, setText] = useState(""); // контролируемый input для добовлении todo
-  const [filterTodos, setfilterTodos] = useState("") // контролируемый input для фильтрации todo
+  const [text, setText] = useState(""); // input для добовления todo
+   const [filter, setFilter] = useState(""); //  input для фильтрации todo
   const [todoList, setTodoList] = useState([]); // массив всех todo
 ```
 
@@ -3066,7 +3074,7 @@ export const getIsAuthenticated = (state) => state.auth.isAuthenticated;
 ```
   import { useReducer } from "react";
 
-// Заменяет три локальных стейта
+// Редьюсер для списка задач
   const [todoList, dispatch] = useReducer(todosReducer, []);
 
 // Это можно вынести в др.файл и заимпортировать
@@ -3120,3 +3128,164 @@ const addTodo = (e) => {
 
 Сам редьюсер можно вынести в отдельный файл и заимпортировать:
 ![useReducer](./images/useReducer.jpg)
+
+### useMemo
+
+В [компоненте](./src/components/TodosReducer.jsx) есть функция для фильтрации заметок
+
+```
+  const getVisibleTodos = () => {
+    console.log("function called");
+    return todoList.filter(({ text }) => text.toLowerCase().includes(filter));
+  };
+  const visibleTodos = getVisibleTodos();
+```
+
+В такой имплементации функция вызывается каждый раз при изменении любой части состояния компонента, а не только фильтра. То есть когда пользователь пишет в инпут для добавления заметок или кликает на кнопку, фильтр также вызывается.
+
+Хук useMemo позволяет легко исправить это:
+
+```
+
+  const visibleTodos = useMemo(() => {
+    console.log("function called");
+    return todoList.filter(({ text }) => text.toLowerCase().includes(filter));
+  }, [filter, todoList]);
+
+```
+
+Вызывать visibleTodos, как в примере выше вызывается getVisibleTodos теперь не надо, т.к. visibleTodos - это строка, а вызов функции осуществляет хук useMemo.
+
+### useCallback
+
+Хук **useMemo** предназначен для мемоизации результатов расчетов между вызовами функции и ререндерами. Если же нужно мемоизировать результат коллбека, используется **useCallback**.
+
+В [компоненте userMenu](./src/components/UserMenu/UserMenu.jsx) есть функция **onLogout**, которая диспатчит операцию **logOut** через callback. Этот callback вызывается каждый рендер, но при этом возвращает каждый раз ссылку на новую функцию.
+
+Используя **useCallback**, можно указать условия, при котором будет создаваться новая функция, в остальных же случаях при повторном вызове будет возвращаться ссылка на ранее созданную функцию.
+
+`const onLogout = useCallback(() => dispatch(logOut()), [dispatch]);`
+
+### memo
+
+**memo** - это HOC для классовых компонентов, который работает схожим образом с классовыми компонентами, наследующимися от **PureComponent**.
+
+Отличие в том, что **PureComponent** делает поверхностное сравнение состояния и пропсов, предотвращая повторный рендеринг, если они не изменились. React.memo же реализует только сравнение пропсов.
+
+### useRef
+
+Есть простой компонент, который показывает текущее время
+
+```
+import { useState, useEffect } from "react";
+
+export default const Clock = () => {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setTime(new Date());
+    }, 1000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  return <p>{time.toLocaleTimeString()}</p>;
+};
+```
+
+Нужно добавить кнопку stop, чтобы при нажатии на нее останавливать часы. Проблема в том, что функция setInterval находится внутри useEffect, то есть недоступна извне.
+
+В [классовом компоненте](./src/components/Clock/ClockClasses.jsx) это решается просто: создается внешний метод stop, который очищает интервал и передается в componentWillUnmount и на кнопку:
+
+```
+ componentDidMount() {
+    this.intervalId = setInterval(() => {
+      this.setState({ time: new Date() });
+    }, 1000);
+  }
+  componentWillUnmount() {
+    this.stop();
+  }
+  stop = () => {
+    clearInterval(this.intervalId);
+  };
+
+    render() {
+    return (
+      <>
+        <button type="button" onClick={this.stop}>
+          Stop
+        </button>
+      </>
+    );
+  }
+```
+
+В классовых компонентах контекст недоступен, и чтобы получить доступ к интервалу вне useEffect нужно использовать хук useRef.
+
+```
+import React, { useRef } from 'react';
+
+// Переменной intervalId присваивается вызов useRef()
+const intervalId = useRef();
+
+// Теперь в любой части компонента можно получить ссылку на intervalId через свойство current
+
+  useEffect(() => {
+    intervalId.current = setInterval(() => {
+      console.log('Это интервал каждые 1000ms ' + Date.now());
+      setTime(new Date());
+    }, 1000);
+
+    return () => {
+      stop();
+    };
+  }, []);
+
+const stop = () => {
+    clearInterval(intervalId.current);
+  };
+
+  // метод stop можно добавить и в return useEffect, и на кнопку
+const stop = () => {
+    clearInterval(intervalId.current);
+  };
+
+    return (
+    <>
+      <p style={styles.clockface}>Текущее время: {time.toLocaleTimeString()}</p>
+      <button type="button" onClick={stop}>
+        Stop
+      </button>
+    </>
+  );
+}
+
+```
+
+---
+
+## Хуки React Router Dom
+
+Компонентам, которые рендарятся в Route через проп `component={}` по умолчанию приходят объекты-пропы от react-router-dom:
+
+- **history** - объект истории, созданный раутером
+- **location** - объект хранящий информацию о текущем URL
+- **match** — объект с информацией о том как совпали path, указанный пропом в Route и location.pathname(фактический адрес страницы)
+
+Если рендерить компонент между парным тегом Route, эти пропы не приходят:
+
+```
+<Route path="/routerhooks">
+            <RouterHooks />
+          </Route>
+```
+
+Но есть хуки, которые позволяют получить их.
+
+- **useHistory()** - объект истории
+- **useLocation** - текущий маршрут
+- **useRouteMatch** - объект с path и url
+- **useParams** - динамические параметры (передаются так /:)
+
+![params](./images/params.jpg)

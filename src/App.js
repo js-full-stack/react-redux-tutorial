@@ -1,10 +1,9 @@
 import { Switch, Route } from "react-router-dom";
 import { useEffect, Suspense, lazy } from "react";
-import { connect } from "react-redux";
+import { useDispatch } from "react-redux";
 
-// import TodosView from "./views/TodosView";
 import AppBar from "./components/UserMenu/AppBar";
-// import HomeView from "./views/HomeView";
+
 import CounterView from "./views/CounterView";
 import { getCurrentUser } from "./Redux/authTodos/auth-operations";
 import PrivateRoute from "./components/PrivateRoute";
@@ -14,10 +13,12 @@ const HomeView = lazy(() => import("./views/HomeView"));
 const LoginView = lazy(() => import("./views/LoginView"));
 const RegisterView = lazy(() => import("./views/RegisterView"));
 const TodosViewRedux = lazy(() => import("./views/TodosViewRedux"));
+const RouterHooks = lazy(() => import("./components/RouterHooks"));
 
-function App({ onGetCurrentUser }) {
+function App() {
+  const dispatch = useDispatch();
   useEffect(() => {
-    onGetCurrentUser();
+    dispatch(getCurrentUser());
   }, []);
 
   return (
@@ -26,6 +27,9 @@ function App({ onGetCurrentUser }) {
         <AppBar />
         <Switch>
           <Route exact path="/" component={HomeView} />
+          <Route path="/routerhooks/">
+            <RouterHooks />
+          </Route>
           <PublicRoute path="/login" restricted component={LoginView} />
           <PublicRoute path="/register" restricted component={RegisterView} />
           <PrivateRoute path="/todos" component={TodosViewRedux} />
@@ -35,11 +39,11 @@ function App({ onGetCurrentUser }) {
   );
 }
 
-const mapDispatchToProps = {
-  onGetCurrentUser: getCurrentUser,
-};
+// const mapDispatchToProps = {
+//   onGetCurrentUser: getCurrentUser,
+// };
 
-export default connect(null, mapDispatchToProps)(App);
+export default App;
 
 //  <li>
 //    <Link to="/counter">Counter</Link>

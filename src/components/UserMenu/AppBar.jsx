@@ -1,5 +1,5 @@
 import React from "react";
-import { connect, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import Navigation from "./Navigation";
 import UserMenu from "./UserMenu";
 import AuthNav from "./AuthNav";

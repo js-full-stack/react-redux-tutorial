@@ -1,11 +1,11 @@
-import { useState, useReducer } from "react";
+import { useState, useReducer, useMemo } from "react";
 import todosReducer from "./reducer";
 
 const Todos = () => {
   const [todoList, dispatch] = useReducer(todosReducer, []);
 
   const [text, setText] = useState("");
-  const [filterTodos, setfilterTodos] = useState("");
+  const [filter, setFilter] = useState("");
 
   const handleChange = (e) => {
     const { value } = e.currentTarget;
@@ -33,18 +33,26 @@ const Todos = () => {
 
   const filterTodo = (e) => {
     const { value } = e.currentTarget;
-    setfilterTodos(value.toLowerCase());
+    setFilter(value.toLowerCase());
   };
 
-  const getVisibleTodos = () =>
-    todoList.filter(({ text }) => text.toLowerCase().includes(filterTodos));
-  const visibleTodos = getVisibleTodos();
+  const visibleTodos = useMemo(() => {
+    console.log("function called");
+    return todoList.filter(({ text }) => text.toLowerCase().includes(filter));
+  }, [filter, todoList]);
+
+  // const getVisibleTodos = () => {
+  //   console.log("function called");
+  //   return todoList.filter(({ text }) => text.toLowerCase().includes(filter));
+  // };
+  // const visibleTodos = getVisibleTodos();
 
   return (
     <>
       <label>
         <input
           onChange={filterTodo}
+          value={filter}
           type="text"
           placeholder="Enter the title todo"
         />

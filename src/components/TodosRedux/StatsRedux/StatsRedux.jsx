@@ -1,9 +1,9 @@
-import { connect, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { getAllTodos } from "../../../Redux/Todos/";
 import "./Stats.scss";
 
-const StatsRedux = ({ allTodos }) => {
-  // const allTodos = useSelector((state) => state.todos.items);
+const StatsRedux = () => {
+  const allTodos = useSelector(getAllTodos);
   const completedTodoCount = allTodos.filter(({ completed }) => completed);
 
   return (
@@ -21,9 +21,9 @@ const StatsRedux = ({ allTodos }) => {
   );
 };
 
-const mapStateToProps = (state) => ({
-  allTodos: getAllTodos(state),
-});
+// const mapStateToProps = (state) => ({
+//   allTodos: getAllTodos(state),
+// });
 
-export default connect(mapStateToProps, null)(StatsRedux);
-// export default StatsRedux;
+// export default connect(mapStateToProps, null)(StatsRedux);
+export default StatsRedux;

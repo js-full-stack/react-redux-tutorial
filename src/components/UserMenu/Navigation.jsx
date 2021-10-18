@@ -17,10 +17,17 @@ const styles = {
 };
 
 const Navigation = () => {
-  const isAuth = useSelector((state) => getIsAuthenticated(state));
+  const isAuth = useSelector(getIsAuthenticated);
 
   return (
     <nav>
+      <NavLink
+        to="/routerhooks"
+        style={styles.link}
+        activeStyle={styles.activeLink}
+      >
+        Router hooks
+      </NavLink>
       <NavLink to="/" exact style={styles.link} activeStyle={styles.activeLink}>
         Главная
       </NavLink>
